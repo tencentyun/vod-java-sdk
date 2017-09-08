@@ -20,58 +20,52 @@ public class VodApiTest {
     public void uploadWithNullSecretId() throws Exception {
         thrown.expect(VodParamException.class);
         thrown.expectMessage("secretId is null");
-        VodParam param = new VodParam(null, null,null, null, null);
-        VodApi.upload(param);
+        VodApi vodApi = new VodApi(null, null);
+        vodApi.upload(null);
     }
 
     @Test
     public void uploadWithNullSecretKey() throws Exception {
         thrown.expect(VodParamException.class);
         thrown.expectMessage("secretKey is null");
-        VodParam param = new VodParam("a", null,null, null, null);
-        VodApi.upload(param);
+        VodApi vodApi = new VodApi("a", null);
+        vodApi.upload(null);
     }
 
     @Test
     public void uploadWithNullVideoPath() throws Exception {
         thrown.expect(VodParamException.class);
         thrown.expectMessage("videoPath is null");
-        VodParam param = new VodParam("a", "b",null, null, null);
-        VodApi.upload(param);
+        VodApi vodApi = new VodApi("a", "b");
+        vodApi.upload(null);
     }
 
     @Test
     public void uploadWithInvalidVideoPath() throws Exception {
         thrown.expect(VodParamException.class);
         thrown.expectMessage("videoPath is invalid");
-        VodParam param = new VodParam("a", "b","@3112.avi", null, null);
-        VodApi.upload(param);
+        VodApi vodApi = new VodApi("a", "b");
+        vodApi.upload("@3112.avi");
     }
 
     @Test
     public void uploadWithInvalidCoverPath() throws Exception {
         thrown.expect(VodParamException.class);
         thrown.expectMessage("videoPath is invalid");
-        VodParam param = new VodParam("a", "b","@3112.avi", "@3112.png", null);
-        VodApi.upload(param);
+        VodApi vodApi = new VodApi("a", "b");
+        vodApi.upload("@3112.avi", "@3112.png");
     }
 
     @Test
     public void uploadWithInvalidSecretIdAndKey() throws Exception {
         thrown.expect(VodHandleException.class);
-        VodParam param = new VodParam("a", "b", "videos/Wildlife.wmv", "videos/Wildlife-cover.png", null);
-        VodApi.upload(param);
+        VodApi vodApi = new VodApi("a", "b");
+        vodApi.upload("videos/Wildlife.wmv", "videos/Wildlife-cover.png");
     }
 
     @Test
     public void upload() throws Exception {
-        VodParam param = new VodParam(
-                "your secretId",
-                "your secretKey",
-                "videos/Wildlife.wmv",
-                "videos/Wildlife-cover.png",
-                "QCVB_SimpleProcessFile(30,1,10,10)"
-        );
-        VodApi.upload(param);
+        VodApi vodApi = new VodApi("your secretId", "your secretKey");
+        vodApi.upload("videos/Wildlife.wmv", "videos/Wildlife-cover.png", "QCVB_SimpleProcessFile(30,1,10,10)");
     }
 }

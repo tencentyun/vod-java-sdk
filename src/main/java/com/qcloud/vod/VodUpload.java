@@ -8,6 +8,8 @@ import com.qcloud.cos.auth.COSCredentials;
 import com.qcloud.cos.model.PutObjectRequest;
 import com.qcloud.cos.model.PutObjectResult;
 import com.qcloud.cos.region.Region;
+import com.qcloud.cos.transfer.TransferManager;
+import com.qcloud.cos.transfer.Upload;
 import com.qcloud.vod.common.VodConst;
 import com.qcloud.vod.common.VodCosConf;
 import com.qcloud.vod.common.VodParam;
@@ -38,7 +40,7 @@ public class VodUpload {
      * @return
      * @throws Exception
      */
-    public static VodUploadApplyResponse applyUpload(QcloudApiModuleCenter moduleCenter, VodParam vodParam) throws Exception {
+    public static VodUploadApplyResponse applyUpload(QcloudApiModuleCenter moduleCenter, VodParam vodParam, int retryTime) throws Exception {
         TreeMap<String, Object> params = new TreeMap<String, Object>();
 
         if (vodParam.getVideoPath() == null) {
@@ -59,10 +61,17 @@ public class VodUpload {
             params.put(VodConst.KEY_PROCEDURE, vodParam.getProcedure());
         }
 
-        String result = null;
+        VodUploadApplyResponse response = null;
         try {
-            result = moduleCenter.call(VodConst.MODULE_APPLY_UPLOAD, params);
-            VodUploadApplyResponse response = JacksonUtil.readValue(result, VodUploadApplyResponse.class);
+            for (int i = 0; i < retryTime; i++) {
+                String result = moduleCenter.call(VodConst.MODULE_APPLY_UPLOAD, params);
+                response = JacksonUtil.readValue(result, VodUploadApplyResponse.class);
+                if (response.isFail()) {
+                    logger.info("apply upload fail, result={}", result);
+                } else {
+                    break;
+                }
+            }
             return response;
         } catch (Exception e) {
             logger.error("apply upload error, param=" + vodParam, e);
@@ -71,35 +80,34 @@ public class VodUpload {
     }
 
     /**
-     * 获取CosClient
+     * 获取TransferManager
      * @param param
      * @param uploadApplyResponse
      * @return
      */
-    public static COSClient getCosClient(VodParam param, VodUploadApplyResponse uploadApplyResponse) {
+    public static TransferManager getTransferManager(VodParam param, VodUploadApplyResponse uploadApplyResponse, int signExpired) {
         String region = "cos." + uploadApplyResponse.getStorageRegionV5();
         ClientConfig clientConfig = new ClientConfig(new Region(region));
-        clientConfig.setSignExpired(24 * 3600);
+        clientConfig.setSignExpired(signExpired);
 
         COSCredentials credentials = new BasicCOSCredentials(String.valueOf(uploadApplyResponse.getStorageAppId()), param.getSecretId(), param.getSecretKey());
         COSClient cosClient = new COSClient(credentials, clientConfig);
 
-        return cosClient;
+        return new TransferManager(cosClient);
     }
 
     /**
      * 上传文件到Cos
-     * @param cosClient
+     * @param transferManager
      * @param conf
      * @return
      */
-    public static PutObjectResult uploadCos(COSClient cosClient, VodCosConf conf) {
+    public static void uploadCos(TransferManager transferManager, VodCosConf conf) throws Exception {
         File file = new File(conf.getFilePath());
-        PutObjectRequest coverPutRequest = new PutObjectRequest(conf.getBucketName(), conf.getStoragePath(), file);
 
         try {
-            PutObjectResult result = cosClient.putObject(coverPutRequest);
-            return result;
+            Upload upload = transferManager.upload(conf.getBucketName(), conf.getStoragePath(), file);
+            upload.waitForCompletion();
         } catch (Exception e) {
             logger.error("upload cos error, conf=" + conf, e);
             throw e;
@@ -113,15 +121,22 @@ public class VodUpload {
      * @return
      * @throws Exception
      */
-    public static VodUploadCommitResponse commitUpload(QcloudApiModuleCenter moduleCenter, VodUploadApplyResponse uploadApplyResponse) throws Exception {
+    public static VodUploadCommitResponse commitUpload(QcloudApiModuleCenter moduleCenter, VodUploadApplyResponse uploadApplyResponse, int retryTime) throws Exception {
         TreeMap<String, Object> params = new TreeMap<String, Object>();
 
         params.put(VodConst.KEY_SESSION_KEY, uploadApplyResponse.getVodSessionKey());
 
-        String result = null;
+        VodUploadCommitResponse response = null;
         try {
-            result = moduleCenter.call(VodConst.MODULE_COMMIT_UPLOAD, params);
-            VodUploadCommitResponse response = JacksonUtil.readValue(result, VodUploadCommitResponse.class);
+            for (int i = 0; i < retryTime; i++) {
+                String result = moduleCenter.call(VodConst.MODULE_COMMIT_UPLOAD, params);
+                response = JacksonUtil.readValue(result, VodUploadCommitResponse.class);
+                if (response.isFail()) {
+                    logger.info("commit upload fail, result={}", result);
+                } else {
+                    break;
+                }
+            }
             return response;
         } catch (Exception e) {
             logger.error("commit upload error, vodSessionKey=" + uploadApplyResponse.getVodSessionKey(), e);
