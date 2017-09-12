@@ -63,9 +63,9 @@ public class VodApiTest {
         vodApi.upload("videos/Wildlife.wmv", "videos/Wildlife-cover.png");
     }
 
-    @Test
-    public void upload() throws Exception {
-        VodApi vodApi = new VodApi("your secretId", "your secretKey");
-        vodApi.upload("videos/Wildlife.wmv", "videos/Wildlife-cover.png", "QCVB_SimpleProcessFile(30,1,10,10)");
-    }
+//    @Test
+//    public void upload() throws Exception {
+//        VodApi vodApi = new VodApi("your secretId", "your secretKey");
+//        vodApi.upload("videos/Wildlife.wmv", "videos/Wildlife-cover.png", "QCVB_SimpleProcessFile(30,1,10,10)");
+//    }
 }
