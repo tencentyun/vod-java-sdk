@@ -17,6 +17,9 @@ import com.qcloud.vod.util.JacksonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.TreeMap;
 
 /**
@@ -37,9 +40,6 @@ public class VodApi {
     //签名有效时长(秒级)
     private int signExpired;
 
-    //重试次数
-    private int retryTime;
-
     public VodApi(String secretId, String secretKey) {
         //设置默认的签名有效时长
         this(secretId, secretKey, 24 * 3600);
@@ -49,8 +49,6 @@ public class VodApi {
         this.secretId = secretId;
         this.secretKey = secretKey;
         this.signExpired = signExpired;
-        //默认重试次数为3，针对ApplyUpload和CommitUpload
-        this.retryTime = 3;
     }
 
     /**
@@ -86,7 +84,7 @@ public class VodApi {
      * @throws Exception
      */
     public VodUploadCommitResponse upload(String videoPath) throws Exception {
-        return upload(videoPath, null, null);
+        return upload(videoPath, null);
     }
 
     /**
@@ -97,7 +95,7 @@ public class VodApi {
      * @throws Exception
      */
     public VodUploadCommitResponse upload(String videoPath, String coverPath) throws Exception {
-        return upload(videoPath, coverPath, null);
+        return upload(videoPath, coverPath, Collections.EMPTY_MAP);
     }
 
     /**
@@ -109,12 +107,17 @@ public class VodApi {
      * @throws Exception
      */
     public VodUploadCommitResponse upload(String videoPath, String coverPath, String procedure) throws Exception {
+        Map<String, Object> extraParams = new HashMap<String, Object>();
+        extraParams.put(VodConst.KEY_PROCEDURE, procedure);
+        return upload(videoPath, coverPath, extraParams);
+    }
+
+    public VodUploadCommitResponse upload(String videoPath, String coverPath, Map<String, Object> extraParams) throws Exception {
         VodParam param = new VodParam();
         param.setSecretId(secretId);
         param.setSecretKey(secretKey);
         param.setVideoPath(videoPath);
         param.setCoverPath(coverPath);
-        param.setProcedure(procedure);
         checkVodUploadParam(param);
 
         TreeMap<String, Object> vodConfig = new TreeMap<String, Object>();
@@ -125,7 +128,7 @@ public class VodApi {
         QcloudApiModuleCenter moduleCenter = new QcloudApiModuleCenter(new Vod(), vodConfig);
 
         //提交上传
-        VodUploadApplyResponse uploadApplyResponse = VodUpload.applyUpload(moduleCenter, param, retryTime);
+        VodUploadApplyResponse uploadApplyResponse = VodUpload.applyUpload(moduleCenter, param, extraParams);
         String uploadApplyResponseJson = JacksonUtil.toJSon(uploadApplyResponse);
         if (uploadApplyResponse.isFail()) {
             logger.error("apply upload fail, result={}", uploadApplyResponseJson);
@@ -161,7 +164,7 @@ public class VodApi {
         }
 
         //确认上传
-        VodUploadCommitResponse uploadCommitResponse = VodUpload.commitUpload(moduleCenter, uploadApplyResponse, retryTime);
+        VodUploadCommitResponse uploadCommitResponse = VodUpload.commitUpload(moduleCenter, uploadApplyResponse);
         String uploadCommitResponseJson = JacksonUtil.toJSon(uploadCommitResponse);
         if (uploadCommitResponse.isFail()) {
             logger.error("commit upload fail, result={}", uploadCommitResponseJson);
@@ -170,13 +173,5 @@ public class VodApi {
         logger.info("commit upload success, result={}", uploadCommitResponseJson);
 
         return uploadCommitResponse;
-    }
-
-    public int getRetryTime() {
-        return retryTime;
-    }
-
-    public void setRetryTime(int retryTime) {
-        this.retryTime = retryTime;
     }
 }
