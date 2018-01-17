@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.Map;
 import java.util.TreeMap;
 
 /**
@@ -40,8 +41,8 @@ public class VodUpload {
      * @return
      * @throws Exception
      */
-    public static VodUploadApplyResponse applyUpload(QcloudApiModuleCenter moduleCenter, VodParam vodParam, int retryTime) throws Exception {
-        TreeMap<String, Object> params = new TreeMap<String, Object>();
+    public static VodUploadApplyResponse applyUpload(QcloudApiModuleCenter moduleCenter, VodParam vodParam, Map<String, Object> extraParams) throws Exception {
+        TreeMap<String, Object> params = new TreeMap<String, Object>(extraParams);
 
         if (vodParam.getVideoPath() == null) {
             throw new VodParamException("videoPath is null");
@@ -57,21 +58,10 @@ public class VodUpload {
             params.put(VodConst.KEY_COVER_TYPE, FileUtil.getFileType(vodParam.getCoverPath()));
         }
 
-        if (vodParam.getProcedure() != null) {
-            params.put(VodConst.KEY_PROCEDURE, vodParam.getProcedure());
-        }
-
         VodUploadApplyResponse response = null;
         try {
-            for (int i = 0; i < retryTime; i++) {
-                String result = moduleCenter.call(VodConst.MODULE_APPLY_UPLOAD, params);
-                response = JacksonUtil.readValue(result, VodUploadApplyResponse.class);
-                if (response.isFail()) {
-                    logger.info("apply upload fail, result={}", result);
-                } else {
-                    break;
-                }
-            }
+            String result = moduleCenter.call(VodConst.MODULE_APPLY_UPLOAD, params);
+            response = JacksonUtil.readValue(result, VodUploadApplyResponse.class);
             return response;
         } catch (Exception e) {
             logger.error("apply upload error, param=" + vodParam, e);
@@ -121,22 +111,15 @@ public class VodUpload {
      * @return
      * @throws Exception
      */
-    public static VodUploadCommitResponse commitUpload(QcloudApiModuleCenter moduleCenter, VodUploadApplyResponse uploadApplyResponse, int retryTime) throws Exception {
+    public static VodUploadCommitResponse commitUpload(QcloudApiModuleCenter moduleCenter, VodUploadApplyResponse uploadApplyResponse) throws Exception {
         TreeMap<String, Object> params = new TreeMap<String, Object>();
 
         params.put(VodConst.KEY_SESSION_KEY, uploadApplyResponse.getVodSessionKey());
 
         VodUploadCommitResponse response = null;
         try {
-            for (int i = 0; i < retryTime; i++) {
-                String result = moduleCenter.call(VodConst.MODULE_COMMIT_UPLOAD, params);
-                response = JacksonUtil.readValue(result, VodUploadCommitResponse.class);
-                if (response.isFail()) {
-                    logger.info("commit upload fail, result={}", result);
-                } else {
-                    break;
-                }
-            }
+            String result = moduleCenter.call(VodConst.MODULE_COMMIT_UPLOAD, params);
+            response = JacksonUtil.readValue(result, VodUploadCommitResponse.class);
             return response;
         } catch (Exception e) {
             logger.error("commit upload error, vodSessionKey=" + uploadApplyResponse.getVodSessionKey(), e);
