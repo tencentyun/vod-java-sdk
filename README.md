@@ -6,7 +6,7 @@ vod-java-sdk主要用于提供点播相关功能API,辅助用户服务端进行�
 <dependency>
     <groupId>com.qcloud</groupId>
     <artifactId>vod_api</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.1</version>
 </dependency>
 ```
 
