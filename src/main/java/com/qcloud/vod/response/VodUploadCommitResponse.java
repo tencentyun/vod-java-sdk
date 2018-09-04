@@ -1,10 +1,13 @@
 package com.qcloud.vod.response;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 /**
  * 点播确认上传返回结构
  * @author jianguoxu
  * @time 2017/9/5 16:43
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class VodUploadCommitResponse extends VodBaseResponse {
 
     //文件id

@@ -40,15 +40,23 @@ public class VodApi {
     //签名有效时长(秒级)
     private int signExpired;
 
+    //并发上传数目
+    private int concurrentUploadNumber;
+
     public VodApi(String secretId, String secretKey) {
         //设置默认的签名有效时长
-        this(secretId, secretKey, 24 * 3600);
+        this(secretId, secretKey, 24 * 3600, 1);
     }
 
-    public VodApi(String secretId, String secretKey, int signExpired) {
+    public VodApi(String secretId, String secretKey, int concurrentUploadNumber) {
+        this(secretId, secretKey, 24 * 3600, concurrentUploadNumber);
+    }
+
+    public VodApi(String secretId, String secretKey, int signExpired, int concurrentUploadNumber) {
         this.secretId = secretId;
         this.secretKey = secretKey;
         this.signExpired = signExpired;
+        this.concurrentUploadNumber = concurrentUploadNumber;
     }
 
     /**
@@ -136,11 +144,11 @@ public class VodApi {
         }
         logger.info("apply upload success, result={}", uploadApplyResponseJson);
 
-        TransferManager transferManager = VodUpload.getTransferManager(param, uploadApplyResponse, signExpired);
+        TransferManager transferManager = VodUpload.getTransferManager(param, uploadApplyResponse, signExpired, concurrentUploadNumber);
         try {
             //上传视频
             VodCosConf videoConf = new VodCosConf(
-                    uploadApplyResponse.getStorageBucket(),
+                    uploadApplyResponse.getStorageBucket() + "-" + uploadApplyResponse.getStorageAppId(),
                     uploadApplyResponse.getVideo().getStoragePath(),
                     param.getVideoPath()
             );
@@ -149,7 +157,7 @@ public class VodApi {
             //上传封面
             if (param.getCoverPath() != null) {
                 VodCosConf coverConf = new VodCosConf(
-                        uploadApplyResponse.getStorageBucket(),
+                        uploadApplyResponse.getStorageBucket() + "-" + uploadApplyResponse.getStorageAppId(),
                         uploadApplyResponse.getCover().getStoragePath(),
                         param.getCoverPath()
                 );

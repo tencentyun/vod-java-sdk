@@ -5,8 +5,6 @@ import com.qcloud.cos.COSClient;
 import com.qcloud.cos.ClientConfig;
 import com.qcloud.cos.auth.BasicCOSCredentials;
 import com.qcloud.cos.auth.COSCredentials;
-import com.qcloud.cos.model.PutObjectRequest;
-import com.qcloud.cos.model.PutObjectResult;
 import com.qcloud.cos.region.Region;
 import com.qcloud.cos.transfer.TransferManager;
 import com.qcloud.cos.transfer.Upload;
@@ -24,6 +22,8 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * 点播上传
@@ -75,13 +75,17 @@ public class VodUpload {
      * @param uploadApplyResponse
      * @return
      */
-    public static TransferManager getTransferManager(VodParam param, VodUploadApplyResponse uploadApplyResponse, int signExpired) {
-        String region = "cos." + uploadApplyResponse.getStorageRegionV5();
-        ClientConfig clientConfig = new ClientConfig(new Region(region));
+    public static TransferManager getTransferManager(VodParam param, VodUploadApplyResponse uploadApplyResponse, int signExpired, int concurrentUploadNumber) {
+        ClientConfig clientConfig = new ClientConfig(new Region(uploadApplyResponse.getStorageRegionV5()));
         clientConfig.setSignExpired(signExpired);
 
-        COSCredentials credentials = new BasicCOSCredentials(String.valueOf(uploadApplyResponse.getStorageAppId()), param.getSecretId(), param.getSecretKey());
+        COSCredentials credentials = new BasicCOSCredentials(param.getSecretId(), param.getSecretKey());
         COSClient cosClient = new COSClient(credentials, clientConfig);
+
+        if(concurrentUploadNumber > 1) {
+            ExecutorService fixedThreadPool = Executors.newFixedThreadPool(concurrentUploadNumber);
+            return new TransferManager(cosClient, fixedThreadPool);
+        }
 
         return new TransferManager(cosClient);
     }
