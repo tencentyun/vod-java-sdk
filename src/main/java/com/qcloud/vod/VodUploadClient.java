@@ -88,7 +88,7 @@ public class VodUploadClient {
         if (StringUtil.isNotEmpty(request.getCoverType()) && StringUtil.isNotEmpty(applyUploadResponse.getCoverStoragePath())) {
             uploadCos(transferManager, request.getCoverFilePath(), applyUploadResponse.getStorageBucket(), applyUploadResponse.getCoverStoragePath());
         }
-        cosClient.shutdown();
+        transferManager.shutdownNow();
 
         CommitUploadRequest commitUploadRequest = new CommitUploadRequest();
         commitUploadRequest.setVodSessionKey(applyUploadResponse.getVodSessionKey());

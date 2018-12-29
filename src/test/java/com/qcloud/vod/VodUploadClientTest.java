@@ -27,11 +27,6 @@ public class VodUploadClientTest {
         return vodUploadClient;
     }
 
-    /**
-     * 缺少视频路径
-     *
-     * @throws Exception
-     */
     @Test
     public void lackMediaPath() throws Exception {
         thrown.expect(VodClientException.class);
@@ -41,96 +36,66 @@ public class VodUploadClientTest {
         client.upload("ap-guangzhou", request);
     }
 
-    /**
-     * 缺少视频类型(文件不带后缀的)
-     *
-     * @throws Exception
-     */
     @Test
     public void lackMediaType() throws Exception {
         thrown.expect(VodClientException.class);
         thrown.expectMessage("lack media type");
         VodUploadRequest request = new VodUploadRequest();
-        request.setMediaFilePath("D:\\file\\output");
+        request.setMediaFilePath("video/Wildlife");
         VodUploadClient client = initVodUploadClient();
         client.upload("ap-guangzhou", request);
     }
 
-    /**
-     * 媒体文件不存在的
-     *
-     * @throws Exception
-     */
     @Test
     public void invalidMediaPath() throws Exception {
         thrown.expect(VodClientException.class);
         thrown.expectMessage("media path is invalid");
         VodUploadRequest request = new VodUploadRequest();
-        request.setMediaFilePath("D:\\file\\outputA");
+        request.setMediaFilePath("video/WildlifeA");
         VodUploadClient client = initVodUploadClient();
         client.upload("ap-guangzhou", request);
     }
 
-    /**
-     * 媒体文件不存在的
-     *
-     * @throws Exception
-     */
     @Test
     public void invalidCoverPath() throws Exception {
         thrown.expect(VodClientException.class);
         thrown.expectMessage("cover path is invalid");
         VodUploadRequest request = new VodUploadRequest();
-        request.setMediaFilePath("D:\\file\\output.ts");
-        request.setCoverFilePath("D:\\file\\testA");
+        request.setMediaFilePath("video/Wildlife.mp4");
+        request.setCoverFilePath("video/Wildlife-CoverA");
         VodUploadClient client = initVodUploadClient();
         client.upload("ap-guangzhou", request);
     }
 
-    /**
-     * 缺少封面类型(文件不带后缀的)
-     *
-     * @throws Exception
-     */
     @Test
     public void lackCoverType() throws Exception {
         thrown.expect(VodClientException.class);
         thrown.expectMessage("lack cover type");
         VodUploadRequest request = new VodUploadRequest();
-        request.setMediaFilePath("D:\\file\\output.ts");
-        request.setCoverFilePath("D:\\file\\pic");
+        request.setMediaFilePath("video/Wildlife.mp4");
+        request.setCoverFilePath("video/Wildlife-Cover");
         VodUploadClient client = initVodUploadClient();
         client.upload("ap-guangzhou", request);
     }
 
-    /**
-     * 媒体类型不合法
-     *
-     * @throws Exception
-     */
     @Test
     public void invalidMediaType() throws Exception {
         thrown.expect(TencentCloudSDKException.class);
         thrown.expectMessage("InvalidParameterValue.VideoType-invalid video type");
         VodUploadRequest request = new VodUploadRequest();
-        request.setMediaFilePath("D:\\file\\output.ts");
+        request.setMediaFilePath("video/Wildlife.mp4");
         request.setMediaType("test");
         VodUploadClient client = initVodUploadClient();
         client.upload("ap-guangzhou", request);
     }
 
-    /**
-     * 媒体类型不合法
-     *
-     * @throws Exception
-     */
     @Test
     public void invalidCoverType() throws Exception {
         thrown.expect(TencentCloudSDKException.class);
         thrown.expectMessage("InvalidParameterValue.CoverType-invalid cover type");
         VodUploadRequest request = new VodUploadRequest();
-        request.setMediaFilePath("D:\\file\\output.ts");
-        request.setCoverFilePath("D:\\file\\test.png");
+        request.setMediaFilePath("video/Wildlife.mp4");
+        request.setCoverFilePath("video/Wildlife-Cover.png");
         request.setCoverType("test");
         VodUploadClient client = initVodUploadClient();
         client.upload("ap-guangzhou", request);
@@ -138,7 +103,7 @@ public class VodUploadClientTest {
 
     @Test
     public void uploadMedia() throws Exception {
-        VodUploadRequest request = new VodUploadRequest("D:\\file\\output.ts", "D:\\file\\test.png");
+        VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4", "video/Wildlife-Cover.png");
         request.setStorageRegion("ap-chongqing");
         request.setMediaName("test-20181129-1423");
         VodUploadClient client = initVodUploadClient();
