@@ -261,4 +261,12 @@ public class VodUploadClient {
 	public void setRetryTime(Integer retryTime) {
 		this.retryTime = retryTime;
 	}
+
+	public HttpProfile getHttpProfile() {
+		return httpProfile;
+	}
+
+	public void setHttpProfile(HttpProfile httpProfile) {
+		this.httpProfile = httpProfile;
+	}
 }
