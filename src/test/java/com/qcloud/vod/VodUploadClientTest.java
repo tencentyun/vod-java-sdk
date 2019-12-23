@@ -81,7 +81,7 @@ public class VodUploadClientTest {
     @Test
     public void invalidMediaType() throws Exception {
         thrown.expect(TencentCloudSDKException.class);
-        thrown.expectMessage("InvalidParameterValue.VideoType-invalid video type");
+        thrown.expectMessage("InvalidParameterValue.MediaType-invalid media type");
         VodUploadRequest request = new VodUploadRequest();
         request.setMediaFilePath("video/Wildlife.mp4");
         request.setMediaType("test");
