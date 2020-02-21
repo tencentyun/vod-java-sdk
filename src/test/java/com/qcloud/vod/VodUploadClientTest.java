@@ -23,7 +23,7 @@ public class VodUploadClientTest {
     public ExpectedException thrown= ExpectedException.none();
 
     public VodUploadClient initVodUploadClient() {
-       VodUploadClient vodUploadClient = new VodUploadClient("your secretId", "your secretKey");
+        VodUploadClient vodUploadClient = new VodUploadClient("your secretId", "your secretKey");
         return vodUploadClient;
     }
 
