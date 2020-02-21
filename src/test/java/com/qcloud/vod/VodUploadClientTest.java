@@ -23,7 +23,7 @@ public class VodUploadClientTest {
     public ExpectedException thrown= ExpectedException.none();
 
     public VodUploadClient initVodUploadClient() {
-        VodUploadClient vodUploadClient = new VodUploadClient("your secretId", "your secretKey");
+       VodUploadClient vodUploadClient = new VodUploadClient("your secretId", "your secretKey");
         return vodUploadClient;
     }
 
@@ -81,7 +81,7 @@ public class VodUploadClientTest {
     @Test
     public void invalidMediaType() throws Exception {
         thrown.expect(TencentCloudSDKException.class);
-        thrown.expectMessage("InvalidParameterValue.VideoType-invalid video type");
+        thrown.expectMessage("InvalidParameterValue.MediaType-invalid media type");
         VodUploadRequest request = new VodUploadRequest();
         request.setMediaFilePath("video/Wildlife.mp4");
         request.setMediaType("test");
@@ -110,4 +110,12 @@ public class VodUploadClientTest {
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
     }
+    
+    @Test
+    public void uploadHls() throws Exception {
+        VodUploadRequest request = new VodUploadRequest("video/hls/prog_index.m3u8", "");
+        VodUploadClient client = initVodUploadClient();
+        VodUploadResponse response = client.upload("ap-guangzhou", request);
+        logger.info("Upload FileId = {}", response.getFileId());
+	}
 }

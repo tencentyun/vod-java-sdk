@@ -25,8 +25,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.nio.file.Paths;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 点播上传客户端
@@ -74,6 +82,18 @@ public class VodUploadClient {
 		} else {
 			vodClient = new VodClient(credential, region);
 		}
+		
+		String[] segmentUrls = null;
+
+		if (request.getMediaType().equals("m3u8") || request.getMediaType().equals("mpd")) {
+			String manifestContent = getManifestContent(request.getMediaFilePath());
+			ParseStreamingManifestRequest parseStreamingManifestRequest = new ParseStreamingManifestRequest();
+			parseStreamingManifestRequest.setMediaManifestContent(manifestContent);
+			parseStreamingManifestRequest.setManifestType(request.getMediaType());
+			
+			ParseStreamingManifestResponse parseStreamingManifestResponse = parseStreamingManifest(vodClient, parseStreamingManifestRequest);
+			segmentUrls = parseStreamingManifestResponse.getMediaSegmentSet();
+		}
 
 		ApplyUploadRequest applyUploadRequest = ApplyUploadRequest
 				.fromJsonString(VodUploadRequest.toJsonString(request), ApplyUploadRequest.class);
@@ -118,6 +138,18 @@ public class VodUploadClient {
 			uploadCos(transferManager, request.getCoverFilePath(), applyUploadResponse.getStorageBucket(),
 					applyUploadResponse.getCoverStoragePath());
 		}
+		if (segmentUrls != null) {
+			for (String segmentUrl:segmentUrls) {
+				String dir = Paths.get(request.getMediaFilePath()).getParent().toString();
+				String segmentFilePath = Paths.get(dir, segmentUrl).toString().replace('\\','/');
+				
+				String cosDir = Paths.get(applyUploadResponse.getMediaStoragePath()).getParent().toString();
+				String segmentStoragePath = Paths.get(cosDir, segmentUrl).toString().replace('\\','/');
+				
+				uploadCos(transferManager, segmentFilePath, applyUploadResponse.getStorageBucket(), segmentStoragePath.substring(1));
+			}
+		}
+
 		transferManager.shutdownNow();
 
 		CommitUploadRequest commitUploadRequest = new CommitUploadRequest();
@@ -134,6 +166,28 @@ public class VodUploadClient {
 		}
 
 		return uploadResponse;
+	}
+	
+	public VodUploadResponse upload(final String region, final VodUploadRequest request, int timeout) throws Exception {
+		final VodUploadClient vodUploadClient = this;
+		
+		Callable<VodUploadResponse> task = new Callable<VodUploadResponse>() {
+			public VodUploadResponse call() throws Exception {
+				VodUploadResponse response = vodUploadClient.upload(region, request);
+				return response;
+			}
+		};
+		
+		ExecutorService service = Executors.newSingleThreadExecutor();
+		Future<VodUploadResponse> future = service.submit(task);
+		try {
+			VodUploadResponse response = future.get(timeout, TimeUnit.SECONDS);
+			return response;
+		} catch (Exception e) {
+			throw new VodClientException(e);
+		} finally {
+			service.shutdown();
+		}
 	}
 
 	/**
@@ -190,6 +244,23 @@ public class VodUploadClient {
 		}
 		throw err;
 	}
+	
+	private ParseStreamingManifestResponse parseStreamingManifest(VodClient client, ParseStreamingManifestRequest request) throws Exception {
+		TencentCloudSDKException err = null;
+		for (int i = 0; i < retryTime; i++) {
+			try {
+				ParseStreamingManifestResponse response = client.ParseStreamingManifest(request);
+				return response;
+			} catch (TencentCloudSDKException e) {
+				if (StringUtil.isEmpty(e.getRequestId())) {
+					err = e;
+					continue;
+				}
+				throw e;
+			}
+		}
+		throw err;
+	}
 
 	/**
 	 * 前置检查及设置默认值
@@ -228,6 +299,27 @@ public class VodUploadClient {
 				request.setCoverType(coverType);
 			}
 		}
+	}
+	
+	private String getManifestContent(String mediaFilePath) throws VodClientException {
+        String encoding = "UTF-8";  
+        File file = new File(mediaFilePath);  
+        Long filelength = file.length();  
+        byte[] filecontent = new byte[filelength.intValue()];  
+        try {  
+            FileInputStream in = new FileInputStream(file);  
+            in.read(filecontent);  
+            in.close();  
+        } catch (FileNotFoundException e) {  
+        	throw new VodClientException("file not found");
+        } catch (IOException e) {  
+        	throw new VodClientException("file read failed");
+        }  
+        try {  
+            return new String(filecontent, encoding);  
+        } catch (UnsupportedEncodingException e) {  
+            throw new VodClientException("file encoding abnormal");
+        }  
 	}
 
 	public String getSecretId() {
