@@ -143,12 +143,10 @@ public class VodUploadClient {
 
 		for (String segmentUrl : segmentUrlList) {
 			String segmentFilePath = Paths.get(segmentUrl).toString().replace('\\', '/');
-
 			String cosDir = Paths.get(applyUploadResponse.getMediaStoragePath()).getParent().toString();
 			String parentPath = Paths.get(request.getMediaFilePath()).getParent().toString();
 			String segmentPath = segmentUrl.substring(parentPath.length());
 			String segmentStoragePath = Paths.get(cosDir, segmentPath).toString().replace('\\', '/');
-			logger.info("segmentStoragePath: " + segmentStoragePath.substring(1));
 
 			uploadCos(transferManager, segmentFilePath, applyUploadResponse.getStorageBucket(),
 					segmentStoragePath.substring(1));
@@ -248,7 +246,10 @@ public class VodUploadClient {
 		}
 		throw err;
 	}
-
+	
+	/**
+	 * 服务端解析索引文件获取分片信息
+	 */
 	private ParseStreamingManifestResponse parseStreamingManifest(VodClient client,
 			ParseStreamingManifestRequest request) throws Exception {
 		TencentCloudSDKException err = null;
@@ -265,26 +266,6 @@ public class VodUploadClient {
 			}
 		}
 		throw err;
-	}
-
-	private String[] parseStreamingManifest2(String mediaFilePath) throws Exception {
-		List<String> segmentList = new ArrayList<String>();
-		try {
-			BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(mediaFilePath)));
-			String line = null;
-			while ((line = br.readLine()) != null) {
-				if (!line.startsWith("#")) {
-					segmentList.add(line);
-				}
-			}
-			br.close();
-		} catch (FileNotFoundException e) {
-			throw new VodClientException("file not found");
-		} catch (IOException e) {
-			throw new VodClientException("file read failed");
-		}
-
-		return segmentList.toArray(new String[segmentList.size()]);
 	}
 
 	/**
@@ -326,6 +307,9 @@ public class VodUploadClient {
 		}
 	}
 
+	/**
+	 * 获取索引文件内容
+	 */
 	private String getManifestContent(String mediaFilePath) throws VodClientException {
 		String encoding = "UTF-8";
 		File file = new File(mediaFilePath);
@@ -347,35 +331,29 @@ public class VodUploadClient {
 		}
 	}
 
+	/**
+	 * 解析索引文件，兼容多码率形式的索引文件
+	 */
 	private void parseManifest(VodClient vodClient, String manifestFilePath, String manifestMediaType, Set<String> parsedManifestSet, List<String> segmentUrlList) throws Exception {
-		logger.info("manifest path: " + manifestFilePath);
 		if (parsedManifestSet.contains(manifestFilePath)) {
 			throw new VodClientException("repeat manifest segment");
 		} else {
 			parsedManifestSet.add(manifestFilePath);
 		}
-
-//		String manifestContent = getManifestContent(path);
-//		ParseStreamingManifestRequest parseStreamingManifestRequest = new ParseStreamingManifestRequest();
-//		parseStreamingManifestRequest.setMediaManifestContent(manifestContent);
-//		parseStreamingManifestRequest.setManifestType(manifestMediaType);
-//
-//		ParseStreamingManifestResponse parseStreamingManifestResponse = parseStreamingManifest(vodClient,
-//				parseStreamingManifestRequest);
-//		String[] segmentUrls = parseStreamingManifestResponse.getMediaSegmentSet();
-		String[] segmentUrls = parseStreamingManifest2(manifestFilePath);
+		String manifestContent = getManifestContent(manifestFilePath);
+		ParseStreamingManifestRequest parseStreamingManifestRequest = new ParseStreamingManifestRequest();
+		parseStreamingManifestRequest.setMediaManifestContent(manifestContent);
+		parseStreamingManifestRequest.setManifestType(manifestMediaType);
+		ParseStreamingManifestResponse parseStreamingManifestResponse = parseStreamingManifest(vodClient,
+				parseStreamingManifestRequest);
+		String[] segmentUrls = parseStreamingManifestResponse.getMediaSegmentSet();
 		if (segmentUrls != null) {
 			for (String segmentUrl : segmentUrls) {
 				String mediaType = FileUtil.getFileType(segmentUrl);
 				String mediaFilePath = Paths.get(Paths.get(manifestFilePath).getParent().toString(), segmentUrl)
 						.toString();
-
 				segmentUrlList.add(mediaFilePath);
-				logger.info("final segment path: " + mediaFilePath);
-
 				if (isManifestMediaType(mediaType)) {
-//					String parentPath = Paths.get(Paths.get(path).getParent().toString(), mediaFilePath).getParent().toString();
-					String parentPath = Paths.get(manifestFilePath).getParent().toString();
 					parseManifest(vodClient, mediaFilePath, mediaType, parsedManifestSet, segmentUrlList);
 				}
 			}
