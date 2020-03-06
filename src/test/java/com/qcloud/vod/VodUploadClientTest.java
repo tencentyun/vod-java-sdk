@@ -23,7 +23,9 @@ public class VodUploadClientTest {
     public ExpectedException thrown= ExpectedException.none();
 
     public VodUploadClient initVodUploadClient() {
-        VodUploadClient vodUploadClient = new VodUploadClient("your secretId", "your secretKey");
+    	String secretId = System.getenv("SECRET_ID");
+    	String secretKey = System.getenv("SECRET_KEY");
+        VodUploadClient vodUploadClient = new VodUploadClient(secretId, secretKey);
         return vodUploadClient;
     }
 
@@ -114,6 +116,14 @@ public class VodUploadClientTest {
     @Test
     public void uploadHls() throws Exception {
         VodUploadRequest request = new VodUploadRequest("video/hls/prog_index.m3u8", "");
+        VodUploadClient client = initVodUploadClient();
+        VodUploadResponse response = client.upload("ap-guangzhou", request);
+        logger.info("Upload FileId = {}", response.getFileId());
+	}
+    
+    @Test
+    public void uploadMasterPlaylist() throws Exception {
+        VodUploadRequest request = new VodUploadRequest("video/hls/bipbopall.m3u8", "");
         VodUploadClient client = initVodUploadClient();
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());

@@ -24,12 +24,18 @@ import com.tencentcloudapi.vod.v20180717.models.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -82,17 +88,13 @@ public class VodUploadClient {
 		} else {
 			vodClient = new VodClient(credential, region);
 		}
-		
-		String[] segmentUrls = null;
 
-		if (request.getMediaType().equals("m3u8") || request.getMediaType().equals("mpd")) {
-			String manifestContent = getManifestContent(request.getMediaFilePath());
-			ParseStreamingManifestRequest parseStreamingManifestRequest = new ParseStreamingManifestRequest();
-			parseStreamingManifestRequest.setMediaManifestContent(manifestContent);
-			parseStreamingManifestRequest.setManifestType(request.getMediaType());
-			
-			ParseStreamingManifestResponse parseStreamingManifestResponse = parseStreamingManifest(vodClient, parseStreamingManifestRequest);
-			segmentUrls = parseStreamingManifestResponse.getMediaSegmentSet();
+		Set<String> parsedManifestSet = new HashSet<String>();
+		List<String> segmentUrlList = new ArrayList<String>();
+
+		if (isManifestMediaType(request.getMediaType())) {
+			parseManifest(vodClient, request.getMediaFilePath(), request.getMediaType(), parsedManifestSet,
+					segmentUrlList);
 		}
 
 		ApplyUploadRequest applyUploadRequest = ApplyUploadRequest
@@ -138,16 +140,16 @@ public class VodUploadClient {
 			uploadCos(transferManager, request.getCoverFilePath(), applyUploadResponse.getStorageBucket(),
 					applyUploadResponse.getCoverStoragePath());
 		}
-		if (segmentUrls != null) {
-			for (String segmentUrl:segmentUrls) {
-				String dir = Paths.get(request.getMediaFilePath()).getParent().toString();
-				String segmentFilePath = Paths.get(dir, segmentUrl).toString().replace('\\','/');
-				
-				String cosDir = Paths.get(applyUploadResponse.getMediaStoragePath()).getParent().toString();
-				String segmentStoragePath = Paths.get(cosDir, segmentUrl).toString().replace('\\','/');
-				
-				uploadCos(transferManager, segmentFilePath, applyUploadResponse.getStorageBucket(), segmentStoragePath.substring(1));
-			}
+
+		for (String segmentUrl : segmentUrlList) {
+			String segmentFilePath = Paths.get(segmentUrl).toString().replace('\\', '/');
+			String cosDir = Paths.get(applyUploadResponse.getMediaStoragePath()).getParent().toString();
+			String parentPath = Paths.get(request.getMediaFilePath()).getParent().toString();
+			String segmentPath = segmentUrl.substring(parentPath.length());
+			String segmentStoragePath = Paths.get(cosDir, segmentPath).toString().replace('\\', '/');
+
+			uploadCos(transferManager, segmentFilePath, applyUploadResponse.getStorageBucket(),
+					segmentStoragePath.substring(1));
 		}
 
 		transferManager.shutdownNow();
@@ -167,17 +169,17 @@ public class VodUploadClient {
 
 		return uploadResponse;
 	}
-	
+
 	public VodUploadResponse upload(final String region, final VodUploadRequest request, int timeout) throws Exception {
 		final VodUploadClient vodUploadClient = this;
-		
+
 		Callable<VodUploadResponse> task = new Callable<VodUploadResponse>() {
 			public VodUploadResponse call() throws Exception {
 				VodUploadResponse response = vodUploadClient.upload(region, request);
 				return response;
 			}
 		};
-		
+
 		ExecutorService service = Executors.newSingleThreadExecutor();
 		Future<VodUploadResponse> future = service.submit(task);
 		try {
@@ -245,7 +247,11 @@ public class VodUploadClient {
 		throw err;
 	}
 	
-	private ParseStreamingManifestResponse parseStreamingManifest(VodClient client, ParseStreamingManifestRequest request) throws Exception {
+	/**
+	 * 服务端解析索引文件获取分片信息
+	 */
+	private ParseStreamingManifestResponse parseStreamingManifest(VodClient client,
+			ParseStreamingManifestRequest request) throws Exception {
 		TencentCloudSDKException err = null;
 		for (int i = 0; i < retryTime; i++) {
 			try {
@@ -300,26 +306,66 @@ public class VodUploadClient {
 			}
 		}
 	}
-	
+
+	/**
+	 * 获取索引文件内容
+	 */
 	private String getManifestContent(String mediaFilePath) throws VodClientException {
-        String encoding = "UTF-8";  
-        File file = new File(mediaFilePath);  
-        Long filelength = file.length();  
-        byte[] filecontent = new byte[filelength.intValue()];  
-        try {  
-            FileInputStream in = new FileInputStream(file);  
-            in.read(filecontent);  
-            in.close();  
-        } catch (FileNotFoundException e) {  
-        	throw new VodClientException("file not found");
-        } catch (IOException e) {  
-        	throw new VodClientException("file read failed");
-        }  
-        try {  
-            return new String(filecontent, encoding);  
-        } catch (UnsupportedEncodingException e) {  
-            throw new VodClientException("file encoding abnormal");
-        }  
+		String encoding = "UTF-8";
+		File file = new File(mediaFilePath);
+		Long filelength = file.length();
+		byte[] filecontent = new byte[filelength.intValue()];
+		try {
+			FileInputStream in = new FileInputStream(file);
+			in.read(filecontent);
+			in.close();
+		} catch (FileNotFoundException e) {
+			throw new VodClientException("file not found");
+		} catch (IOException e) {
+			throw new VodClientException("file read failed");
+		}
+		try {
+			return new String(filecontent, encoding);
+		} catch (UnsupportedEncodingException e) {
+			throw new VodClientException("file encoding abnormal");
+		}
+	}
+
+	/**
+	 * 解析索引文件，兼容多码率形式的索引文件
+	 */
+	private void parseManifest(VodClient vodClient, String manifestFilePath, String manifestMediaType, Set<String> parsedManifestSet, List<String> segmentUrlList) throws Exception {
+		if (parsedManifestSet.contains(manifestFilePath)) {
+			throw new VodClientException("repeat manifest segment");
+		} else {
+			parsedManifestSet.add(manifestFilePath);
+		}
+		String manifestContent = getManifestContent(manifestFilePath);
+		ParseStreamingManifestRequest parseStreamingManifestRequest = new ParseStreamingManifestRequest();
+		parseStreamingManifestRequest.setMediaManifestContent(manifestContent);
+		parseStreamingManifestRequest.setManifestType(manifestMediaType);
+		ParseStreamingManifestResponse parseStreamingManifestResponse = parseStreamingManifest(vodClient,
+				parseStreamingManifestRequest);
+		String[] segmentUrls = parseStreamingManifestResponse.getMediaSegmentSet();
+		if (segmentUrls != null) {
+			for (String segmentUrl : segmentUrls) {
+				String mediaType = FileUtil.getFileType(segmentUrl);
+				String mediaFilePath = Paths.get(Paths.get(manifestFilePath).getParent().toString(), segmentUrl)
+						.toString();
+				segmentUrlList.add(mediaFilePath);
+				if (isManifestMediaType(mediaType)) {
+					parseManifest(vodClient, mediaFilePath, mediaType, parsedManifestSet, segmentUrlList);
+				}
+			}
+		}
+	}
+
+	private Boolean isManifestMediaType(String mediaType) {
+		if (mediaType.equals("m3u8") || mediaType.equals("mpd")) {
+			return true;
+		}
+
+		return false;
 	}
 
 	public String getSecretId() {

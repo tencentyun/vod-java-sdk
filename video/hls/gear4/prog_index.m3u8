@@ -2,7 +2,7 @@
 #EXT-X-TARGETDURATION:10
 #EXT-X-MEDIA-SEQUENCE:0
 #EXTINF:10, no desc
-fileSequence0.ts
+test/fileSequence0.ts
 #EXTINF:10, no desc
-fileSequence1.ts
+test/fileSequence1.ts
 #EXT-X-ENDLIST
