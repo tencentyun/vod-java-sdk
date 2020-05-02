@@ -55,6 +55,8 @@ public class VodUploadClient {
 
 	private String secretKey;
 
+	private String token;
+
 	private Boolean ignoreCheck;
 
 	private Integer retryTime;
@@ -62,8 +64,13 @@ public class VodUploadClient {
 	private HttpProfile httpProfile = null;
 
 	public VodUploadClient(String secretId, String secretKey) {
+		this(secretId, secretKey, "");
+	}
+
+	public VodUploadClient(String secretId, String secretKey, String token) {
 		this.secretId = secretId;
 		this.secretKey = secretKey;
+		this.token = token;
 		this.ignoreCheck = false;
 		this.retryTime = 3;
 	}
@@ -81,7 +88,7 @@ public class VodUploadClient {
 			prefixCheckAndSetDefaultVal(region, request);
 		}
 
-		Credential credential = new Credential(secretId, secretKey);
+		Credential credential = new Credential(secretId, secretKey, token);
 		VodClient vodClient = null;
 		if (httpProfile != null && httpProfile.getProxyHost() != "" && httpProfile.getProxyPort() != 0) {
 			vodClient = new VodClient(credential, region, new ClientProfile(ClientProfile.SIGN_TC3_256, httpProfile));
@@ -406,5 +413,13 @@ public class VodUploadClient {
 
 	public void setHttpProfile(HttpProfile httpProfile) {
 		this.httpProfile = httpProfile;
+	}
+
+	public String getToken() {
+		return token;
+	}
+
+	public void setToken(String token) {
+		this.token = token;
 	}
 }
