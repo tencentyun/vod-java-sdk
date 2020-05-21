@@ -14,7 +14,7 @@ VOD Java SDK 是基于云点播上传功能进行包装的 Java 版本 SDK，SDK
 
 ## 文档
 - [前置准备工作](https://cloud.tencent.com/document/product/266/9759#.E5.89.8D.E6.8F.90.E6.9D.A1.E4.BB.B6)
-- [接口文档](https://cloud.tencent.com/document/product/266/9759#.E5.89.8D.E6.8F.90.E6.9D.A1.E4.BB.B6)
+- [接口文档](https://cloud.tencent.com/document/product/266/10276#.E6.8E.A5.E5.8F.A3.E6.8F.8F.E8.BF.B0)
 - [功能文档](https://cloud.tencent.com/document/product/266/10276#.E7.AE.80.E5.8D.95.E4.B8.8A.E4.BC.A0)
 - [错误码文档](https://cloud.tencent.com/document/product/266/10276#.E9.94.99.E8.AF.AF.E7.A0.81.E8.A1.A8)
 
