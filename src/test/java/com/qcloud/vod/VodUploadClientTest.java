@@ -11,7 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * 点播上传测试用例
+ * VOD upload test case
  *
  * @author jianguoxu
  */

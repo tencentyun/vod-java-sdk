@@ -3,14 +3,14 @@ package com.qcloud.vod.common;
 import java.io.File;
 
 /**
- * 文件工具类
+ * File tool class
  *
  * @author jianguoxu
  */
 public class FileUtil {
 
     /**
-     * 判断是否存在
+     * Determine whether it exists
      */
     public static Boolean isFileExist(String filePath) {
         File file = new File(filePath);
@@ -18,7 +18,7 @@ public class FileUtil {
     }
 
     /**
-     * 获取文件类型
+     * Get file type
      */
     public static String getFileType(String filePath) {
         int index = filePath.lastIndexOf(".");
@@ -29,7 +29,7 @@ public class FileUtil {
     }
 
     /**
-     * 获取文件名(不包含后缀)
+     * Get filename (excluding file extension)
      */
     public static String getFileName(String filePath) {
         File file = new File(filePath);

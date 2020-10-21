@@ -1,7 +1,7 @@
 package com.qcloud.vod.exception;
 
 /**
- * 客户端错误
+ * Client error
  *
  * @author jianguoxu
  */

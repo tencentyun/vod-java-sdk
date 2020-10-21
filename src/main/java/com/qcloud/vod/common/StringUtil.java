@@ -1,7 +1,7 @@
 package com.qcloud.vod.common;
 
 /**
- * 字符串工具类
+ * String tool class
  *
  * @author jianguoxu
  */
