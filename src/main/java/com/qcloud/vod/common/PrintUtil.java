@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 /**
- * 打印工具
+ * Print tool class
  *
  * @author jianguoxu
  */

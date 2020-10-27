@@ -43,7 +43,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 点播上传客户端
+ * VOD upload client
  *
  * @author jianguoxu
  */
@@ -81,7 +81,7 @@ public class VodUploadClient {
 	}
 
 	/**
-	 * 上传
+	 * Upload
 	 */
 	public VodUploadResponse upload(String region, VodUploadRequest request) throws Exception {
 		if (!ignoreCheck) {
@@ -200,7 +200,7 @@ public class VodUploadClient {
 	}
 
 	/**
-	 * COS上传
+	 * COS upload
 	 */
 	private void uploadCos(TransferManager transferManager, String localPath, String bucket, String cosPath)
 			throws Exception {
@@ -215,7 +215,7 @@ public class VodUploadClient {
 	}
 
 	/**
-	 * 申请上传
+	 * Apply for upload
 	 */
 	private ApplyUploadResponse applyUpload(VodClient client, ApplyUploadRequest request) throws Exception {
 		TencentCloudSDKException err = null;
@@ -235,7 +235,7 @@ public class VodUploadClient {
 	}
 
 	/**
-	 * 确认上传
+	 * Confirm upload
 	 */
 	private CommitUploadResponse commitUpload(VodClient client, CommitUploadRequest request) throws Exception {
 		TencentCloudSDKException err = null;
@@ -255,7 +255,7 @@ public class VodUploadClient {
 	}
 	
 	/**
-	 * 服务端解析索引文件获取分片信息
+	 * Parse index file on server to get segment information
 	 */
 	private ParseStreamingManifestResponse parseStreamingManifest(VodClient client,
 			ParseStreamingManifestRequest request) throws Exception {
@@ -276,7 +276,7 @@ public class VodUploadClient {
 	}
 
 	/**
-	 * 前置检查及设置默认值
+	 * Pre-check and set default values
 	 */
 	private void prefixCheckAndSetDefaultVal(String region, VodUploadRequest request) throws VodClientException {
 		if (StringUtil.isEmpty(region)) {
@@ -315,7 +315,7 @@ public class VodUploadClient {
 	}
 
 	/**
-	 * 获取索引文件内容
+	 * Get index file content
 	 */
 	private String getManifestContent(String mediaFilePath) throws VodClientException {
 		String encoding = "UTF-8";
@@ -339,7 +339,7 @@ public class VodUploadClient {
 	}
 
 	/**
-	 * 解析索引文件，兼容多码率形式的索引文件
+	 * Parse index file, which is compatible with multi-bitrate index files
 	 */
 	private void parseManifest(VodClient vodClient, String manifestFilePath, String manifestMediaType, Set<String> parsedManifestSet, List<String> segmentUrlList) throws Exception {
 		if (parsedManifestSet.contains(manifestFilePath)) {

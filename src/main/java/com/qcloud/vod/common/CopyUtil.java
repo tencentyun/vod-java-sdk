@@ -4,14 +4,14 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 
 /**
- * 复制工具类
+ * Copy tool class
  *
  * @author jianguoxu
  */
 public class CopyUtil {
 
     /**
-     * 把父类克隆为子类
+     * Clone parent class as sub-class
      */
     public static <F, C extends F> C clone(F father, Class<C> clazz) throws Exception {
         C child = clazz.newInstance();
@@ -20,23 +20,23 @@ public class CopyUtil {
     }
 
     /**
-     * 复制父类的属性到子类
+     * Copy the attributes of parent class to sub-class
      */
     private static <F, C extends F> void copy(F father, C child) throws Exception {
         Class<?> fatherClass = father.getClass();
         Field ff[] = fatherClass.getDeclaredFields();
         for (Field f : ff) {
-            //通过父类get方法取出属性值
+            //Get the attribute value through parent GET method
             Method mf = fatherClass.getMethod("get" + upperHeadChar(f.getName()));
             Object obj = mf.invoke(father);
-            //获得set方法的名字让子类执行
+            //Get SET method name for execution by sub-class
             Method mc = fatherClass.getMethod("set" + upperHeadChar(f.getName()), f.getType());
             mc.invoke(child, obj);
         }
     }
 
     /**
-     * 首字母大写
+     * Capitalize the first letter
      */
     private static String upperHeadChar(String in) {
         String head = in.substring(0, 1);
