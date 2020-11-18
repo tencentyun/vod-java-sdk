@@ -24,12 +24,10 @@ import com.tencentcloudapi.vod.v20180717.models.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -106,6 +104,7 @@ public class VodUploadClient {
 
 		ApplyUploadRequest applyUploadRequest = ApplyUploadRequest
 				.fromJsonString(VodUploadRequest.toJsonString(request), ApplyUploadRequest.class);
+		logger.info("ApplyUpload Request = {}", PrintUtil.PrintObject(applyUploadRequest));
 		ApplyUploadResponse applyUploadResponse = applyUpload(vodClient, applyUploadRequest);
 		logger.info("ApplyUpload Response = {}", PrintUtil.PrintObject(applyUploadResponse));
 
@@ -164,6 +163,7 @@ public class VodUploadClient {
 		CommitUploadRequest commitUploadRequest = new CommitUploadRequest();
 		commitUploadRequest.setVodSessionKey(applyUploadResponse.getVodSessionKey());
 		commitUploadRequest.setSubAppId(request.getSubAppId());
+		logger.info("CommitUpload Request = {}", PrintUtil.PrintObject(commitUploadRequest));
 		CommitUploadResponse commitUploadResponse = commitUpload(vodClient, commitUploadRequest);
 		logger.info("CommitUpload Response = {}", PrintUtil.PrintObject(commitUploadResponse));
 
