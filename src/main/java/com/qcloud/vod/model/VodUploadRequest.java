@@ -23,6 +23,12 @@ public class VodUploadRequest extends ApplyUploadRequest {
 
     private Integer ConcurrentUploadNumber;
 
+    /**
+     * cos上传时使用Https上传
+     * 默认false
+     */
+    private Boolean SecureUpload = false;
+
     public VodUploadRequest() {}
 
     public VodUploadRequest(String mediaFilePath) {
@@ -62,11 +68,20 @@ public class VodUploadRequest extends ApplyUploadRequest {
     public void setConcurrentUploadNumber(Integer concurrentUploadNumber) {
         this.ConcurrentUploadNumber = concurrentUploadNumber;
     }
-    
+
     public static String toJsonString(VodUploadRequest obj) {
-         return toJsonObject(obj).toString();
+        return toJsonObject(obj).toString();
     }
-    
+
+    public Boolean getSecureUpload() {
+        return SecureUpload;
+    }
+
+    public VodUploadRequest OpenSecureUpload() {
+        this.SecureUpload = true;
+        return this;
+    }
+
     private static <O extends AbstractModel> JsonObject toJsonObject(O obj) {
         Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
         JsonObject joall = new JsonObject();

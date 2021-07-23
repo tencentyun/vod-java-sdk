@@ -5,6 +5,7 @@ import com.qcloud.cos.ClientConfig;
 import com.qcloud.cos.auth.BasicCOSCredentials;
 import com.qcloud.cos.auth.BasicSessionCredentials;
 import com.qcloud.cos.auth.COSCredentials;
+import com.qcloud.cos.http.HttpProtocol;
 import com.qcloud.cos.region.Region;
 import com.qcloud.cos.transfer.TransferManager;
 import com.qcloud.cos.transfer.Upload;
@@ -118,6 +119,9 @@ public class VodUploadClient {
 			credentials = new BasicCOSCredentials(secretId, secretKey);
 		}
 		ClientConfig clientConfig = new ClientConfig(new Region(applyUploadResponse.getStorageRegion()));
+        if (request.getSecureUpload()) {
+            clientConfig.setHttpProtocol(HttpProtocol.https);
+        }
 		if (httpProfile != null && httpProfile.getProxyHost() != "" && httpProfile.getProxyPort() != 0) {
 			clientConfig.setHttpProxyIp(httpProfile.getProxyHost());
 			clientConfig.setHttpProxyPort(httpProfile.getProxyPort());
@@ -127,6 +131,7 @@ public class VodUploadClient {
 				clientConfig.setUseBasicAuth(true);
 			}
 		}
+
 		COSClient cosClient = new COSClient(credentials, clientConfig);
 
 		TransferManager transferManager = null;
