@@ -77,7 +77,7 @@ public class VodUploadRequest extends ApplyUploadRequest {
         return SecureUpload;
     }
 
-    public VodUploadRequest OpenSecureUpload() {
+    public VodUploadRequest openSecureUpload() {
         this.SecureUpload = true;
         return this;
     }
