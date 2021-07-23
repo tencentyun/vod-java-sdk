@@ -119,9 +119,9 @@ public class VodUploadClient {
 			credentials = new BasicCOSCredentials(secretId, secretKey);
 		}
 		ClientConfig clientConfig = new ClientConfig(new Region(applyUploadResponse.getStorageRegion()));
-        if (request.getSecureUpload()) {
-            clientConfig.setHttpProtocol(HttpProtocol.https);
-        }
+		if (request.getSecureUpload()) {
+		    clientConfig.setHttpProtocol(HttpProtocol.https);
+		}
 		if (httpProfile != null && httpProfile.getProxyHost() != "" && httpProfile.getProxyPort() != 0) {
 			clientConfig.setHttpProxyIp(httpProfile.getProxyHost());
 			clientConfig.setHttpProxyPort(httpProfile.getProxyPort());
