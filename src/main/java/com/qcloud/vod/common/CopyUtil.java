@@ -24,7 +24,7 @@ public class CopyUtil {
      */
     private static <F, C extends F> void copy(F father, C child) throws Exception {
         Class<?> fatherClass = father.getClass();
-        Field ff[] = fatherClass.getDeclaredFields();
+        Field[] ff = fatherClass.getDeclaredFields();
         for (Field f : ff) {
             //Get the attribute value through parent GET method
             Method mf = fatherClass.getMethod("get" + upperHeadChar(f.getName()));
@@ -40,6 +40,6 @@ public class CopyUtil {
      */
     private static String upperHeadChar(String in) {
         String head = in.substring(0, 1);
-        return head.toUpperCase() + in.substring(1, in.length());
+        return head.toUpperCase() + in.substring(1);
     }
 }

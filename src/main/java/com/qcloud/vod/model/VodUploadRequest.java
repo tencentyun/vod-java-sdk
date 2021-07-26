@@ -24,7 +24,8 @@ public class VodUploadRequest extends ApplyUploadRequest {
     private Integer ConcurrentUploadNumber;
 
     /**
-     * cos上传时使用Https上传,默认false
+     * cos上传时使用Https上传
+     * 默认false
      */
     private Boolean SecureUpload = false;
 
