@@ -93,12 +93,13 @@ public class VodUploadRequest extends ApplyUploadRequest {
         JsonObject jopublic = gson.toJsonTree(obj).getAsJsonObject();
         for (Map.Entry<String, JsonElement> entry : jopublic.entrySet()) {
             Object fo = null;
+            Field f;
             try {
-                Field f = obj.getClass().getDeclaredField(entry.getKey());
+                f = obj.getClass().getDeclaredField(entry.getKey());
                 f.setAccessible(true);
                 fo = f.get(obj);
-            } catch (Exception e) {
-                // this should never happen
+            } catch (NoSuchFieldException | IllegalAccessException e) {
+                e.printStackTrace();
             }
             if (fo instanceof AbstractModel) {
                 joall.add(entry.getKey(), toJsonObject((AbstractModel)fo));
