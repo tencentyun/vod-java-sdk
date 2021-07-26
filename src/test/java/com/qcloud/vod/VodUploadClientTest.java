@@ -20,7 +20,7 @@ public class VodUploadClientTest {
     private static final Logger logger = LoggerFactory.getLogger(VodUploadClientTest.class);
 
     @Rule
-    public ExpectedException thrown= ExpectedException.none();
+    public ExpectedException thrown = ExpectedException.none();
 
     public VodUploadClient initVodUploadClient() {
     	String secretId = System.getenv("SECRET_ID");
@@ -105,7 +105,8 @@ public class VodUploadClientTest {
 
     @Test
     public void uploadMedia() throws Exception {
-        VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4", "video/Wildlife-Cover.png");
+        VodUploadRequest request =
+                new VodUploadRequest("video/Wildlife.mp4", "video/Wildlife-Cover.png");
         request.setStorageRegion("ap-chongqing");
         request.setMediaName("test-20181129-1423");
         VodUploadClient client = initVodUploadClient();
@@ -119,7 +120,7 @@ public class VodUploadClientTest {
         VodUploadClient client = initVodUploadClient();
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
-	}
+    }
     
     @Test
     public void uploadMasterPlaylist() throws Exception {
