@@ -1,6 +1,8 @@
 package com.qcloud.vod.model;
 
 import java.lang.reflect.Field;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 
 import com.google.gson.Gson;
@@ -24,10 +26,14 @@ public class VodUploadRequest extends ApplyUploadRequest {
     private Integer ConcurrentUploadNumber;
 
     /**
-     * cos上传时使用Https上传
-     * 默认false
+     * cos上传时使用Https上传,默认false
      */
     private Boolean SecureUpload = false;
+
+    /**
+     * 自定义请求头
+     */
+    private Map<String,String> headersMap;
 
     public VodUploadRequest() {}
 
@@ -77,9 +83,22 @@ public class VodUploadRequest extends ApplyUploadRequest {
         return SecureUpload;
     }
 
-    public VodUploadRequest openSecureUpload() {
+    public void openSecureUpload() {
         this.SecureUpload = true;
-        return this;
+    }
+
+    public void putRequestHeader(String name,String value) {
+        if(this.headersMap == null){
+            this.headersMap = new HashMap<>();
+        }
+        this.headersMap.put(name,value);
+    }
+
+    public Map<String,String> getRequestHeader() {
+        if(this.headersMap != null) {
+            return Collections.unmodifiableMap(this.headersMap);
+        }
+        return null;
     }
 
     private static <O extends AbstractModel> JsonObject toJsonObject(O obj) {
@@ -99,7 +118,7 @@ public class VodUploadRequest extends ApplyUploadRequest {
                 f.setAccessible(true);
                 fo = f.get(obj);
             } catch (NoSuchFieldException | IllegalAccessException e) {
-                e.printStackTrace();
+                // this should never happen
             }
             if (fo instanceof AbstractModel) {
                 joall.add(entry.getKey(), toJsonObject((AbstractModel)fo));

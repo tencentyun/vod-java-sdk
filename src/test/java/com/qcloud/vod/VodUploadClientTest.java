@@ -129,4 +129,23 @@ public class VodUploadClientTest {
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
 	}
+
+	@Test
+    public void uploadBySecurityCos() throws Exception {
+        VodUploadRequest request = new VodUploadRequest("video/hls/bipbopall.m3u8");
+        request.openSecureUpload();
+        VodUploadClient client = initVodUploadClient();
+        VodUploadResponse response = client.upload("ap-guangzhou", request);
+        logger.info("Upload FileId = {}", response.getFileId());
+    }
+
+    @Test
+    public void uploadByCustomHeader() throws Exception {
+        VodUploadRequest request = new VodUploadRequest("video/hls/bipbopall.m3u8");
+        request.putRequestHeader("header-name","header-value");
+        VodUploadClient client = initVodUploadClient();
+        VodUploadResponse response = client.upload("ap-guangzhou", request);
+        logger.info("Upload FileId = {}", response.getFileId());
+    }
+
 }

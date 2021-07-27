@@ -5,7 +5,9 @@ import com.qcloud.cos.ClientConfig;
 import com.qcloud.cos.auth.BasicCOSCredentials;
 import com.qcloud.cos.auth.BasicSessionCredentials;
 import com.qcloud.cos.auth.COSCredentials;
+import com.qcloud.cos.http.HttpMethodName;
 import com.qcloud.cos.http.HttpProtocol;
+import com.qcloud.cos.model.*;
 import com.qcloud.cos.region.Region;
 import com.qcloud.cos.transfer.TransferManager;
 import com.qcloud.cos.transfer.Upload;
@@ -29,10 +31,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -144,12 +143,12 @@ public class VodUploadClient {
 		if (StringUtil.isNotEmpty(request.getMediaType())
 				&& StringUtil.isNotEmpty(applyUploadResponse.getMediaStoragePath())) {
 			uploadCos(transferManager, request.getMediaFilePath(), applyUploadResponse.getStorageBucket(),
-					applyUploadResponse.getMediaStoragePath());
+					applyUploadResponse.getMediaStoragePath(),request.getRequestHeader());
 		}
 		if (StringUtil.isNotEmpty(request.getCoverType())
 				&& StringUtil.isNotEmpty(applyUploadResponse.getCoverStoragePath())) {
 			uploadCos(transferManager, request.getCoverFilePath(), applyUploadResponse.getStorageBucket(),
-					applyUploadResponse.getCoverStoragePath());
+					applyUploadResponse.getCoverStoragePath(),request.getRequestHeader());
 		}
 
 		for (String segmentUrl : segmentUrlList) {
@@ -164,7 +163,8 @@ public class VodUploadClient {
                     Paths.get(cosDir, segmentPath).toString().replace('\\', '/');
 
 			uploadCos(transferManager, segmentFilePath,
-                    applyUploadResponse.getStorageBucket(), segmentStoragePath.substring(1));
+                    applyUploadResponse.getStorageBucket(), segmentStoragePath.substring(1),
+                    request.getRequestHeader());
 		}
 
 		transferManager.shutdownNow();
@@ -208,11 +208,17 @@ public class VodUploadClient {
 	/**
 	 * COS upload
 	 */
-	private void uploadCos(TransferManager transferManager, String localPath, String bucket, String cosPath)
-			throws Exception {
+	private void uploadCos(TransferManager transferManager, String localPath, String bucket, String cosPath,
+                           Map<String,String> headersMap) throws Exception {
 		File file = new File(localPath);
 		try {
-			Upload upload = transferManager.upload(bucket, cosPath, file);
+            PutObjectRequest putObjectRequest=new PutObjectRequest(bucket,cosPath,file);
+            if(headersMap != null){
+                for (Map.Entry<String, String> entry : headersMap.entrySet()) {
+                    putObjectRequest.putCustomRequestHeader(entry.getKey(),entry.getValue());
+                }
+            }
+            Upload upload = transferManager.upload(putObjectRequest);
 			upload.waitForCompletion();
 		} catch (Exception e) {
 			logger.error("Upload Cos Err", e);
@@ -224,7 +230,7 @@ public class VodUploadClient {
 	 * Apply for upload
 	 */
 	private ApplyUploadResponse applyUpload(VodClient client, ApplyUploadRequest request) throws Exception {
-		TencentCloudSDKException err = new TencentCloudSDKException("Apply for upload fail");
+		TencentCloudSDKException err = new TencentCloudSDKException("apply for upload fail");
 		for (int i = 0; i < retryTime; i++) {
 			try {
                 return client.ApplyUpload(request);
@@ -243,7 +249,7 @@ public class VodUploadClient {
 	 * Confirm upload
 	 */
 	private CommitUploadResponse commitUpload(VodClient client, CommitUploadRequest request) throws Exception {
-		TencentCloudSDKException err = new TencentCloudSDKException("Confirm upload fail");
+		TencentCloudSDKException err = new TencentCloudSDKException("confirm upload fail");
 		for (int i = 0; i < retryTime; i++) {
 			try {
                 return client.CommitUpload(request);
@@ -263,7 +269,7 @@ public class VodUploadClient {
 	 */
 	private ParseStreamingManifestResponse parseStreamingManifest(VodClient client,
 			ParseStreamingManifestRequest request) throws Exception {
-		TencentCloudSDKException err = new TencentCloudSDKException("Parse index file on server to get segment information fail");
+		TencentCloudSDKException err = new TencentCloudSDKException("parse index file on server to get segment information fail");
 		for (int i = 0; i < retryTime; i++) {
 			try {
                 return client.ParseStreamingManifest(request);
@@ -324,11 +330,15 @@ public class VodUploadClient {
 		String encoding = "UTF-8";
 		File file = new File(mediaFilePath);
 		long filelength = file.length();
+		if(filelength>Integer.MAX_VALUE){
+            throw new VodClientException("the file is too large");
+        }
 		byte[] filecontent = new byte[(int) filelength];
         try (FileInputStream in = new FileInputStream(file)) {
             int readLength = in.read(filecontent);
-            if (readLength != filelength) {
-                logger.info("Unexpected error read file");
+            int surplusByte = in.read();
+            if (readLength != filelength || surplusByte != -1) {
+                throw new VodClientException("file has changed");
             }
         } catch (FileNotFoundException e) {
             throw new VodClientException("file not found");
