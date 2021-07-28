@@ -24,10 +24,9 @@ import org.slf4j.LoggerFactory;
  */
 public class VodUploadClientTest {
 
-    private static final Logger logger = LoggerFactory.getLogger(VodUploadClientTest.class);
-
     public static String secretId = System.getenv("SECRET_ID");
     public static String secretKey = System.getenv("SECRET_KEY");
+    private static final Logger logger = LoggerFactory.getLogger(VodUploadClientTest.class);
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();
@@ -40,7 +39,10 @@ public class VodUploadClientTest {
         return new VodUploadClient(secretId, secretKey, httpProfile);
     }
 
-    public Credentials getTemporaryCredentials() throws Exception {
+    /**
+     * 获取cos上传的临时凭证
+     */
+    public Credentials obtainTemporaryCredentials() throws Exception {
         Credentials credentials;
         try {
             Credential cred = new Credential(secretId, secretKey);
@@ -74,7 +76,7 @@ public class VodUploadClientTest {
     }
 
     public VodUploadClient initSTSVodUploadClient() throws Exception {
-        Credentials credentials = this.getTemporaryCredentials();
+        Credentials credentials = this.obtainTemporaryCredentials();
         return new VodUploadClient(credentials.getTmpSecretId(), credentials.getTmpSecretKey(), credentials.getToken());
     }
 
@@ -185,9 +187,9 @@ public class VodUploadClientTest {
         VodUploadClient client = initVodUploadClient();
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
-	}
+    }
 
-	@Test
+    @Test
     public void uploadWithSecurityCos() throws Exception {
         VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4");
         request.openSecureUpload();
@@ -218,7 +220,6 @@ public class VodUploadClientTest {
     public void customHttpProfile() throws Exception {
         VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4");
         HttpProfile httpProfile = new HttpProfile();
-        // TODO 不知如何测试
         VodUploadClient client = initVodUploadClientCustomHttpProfile(httpProfile);
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());

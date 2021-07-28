@@ -34,6 +34,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -45,10 +47,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.bouncycastle.util.IPAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sun.net.util.IPAddressUtil;
 
 /**
  * VOD upload client
@@ -91,7 +96,7 @@ public class VodUploadClient {
     }
 
     /**
-     * Upload
+     * Master upload
      */
     public VodUploadResponse upload(String region, VodUploadRequest request)
             throws Exception {
@@ -151,7 +156,8 @@ public class VodUploadClient {
         if (!ignoreCheck) {
             prefixCheckAndSetDefaultVal(region, request);
         }
-        if ((haveHttpProxy=isHaveHttpProxy())&&!validHttpProxy()) {
+        haveHttpProxy = isHaveHttpProxy();
+        if (haveHttpProxy && !validHttpProxy()) {
             throw new VodClientException("proxy configuration error");
         }
     }
@@ -172,36 +178,8 @@ public class VodUploadClient {
      */
     private void uploadCos(VodUploadRequest request, VodClient vodClient,
                            ApplyUploadResponse applyUploadResponse) throws Exception {
-        List<String> segmentUrlList = new ArrayList<>();
 
-        if (isManifestMediaType(request.getMediaType())) {
-            Set<String> parsedManifestSet = new HashSet<>();
-            parseManifest(vodClient, request.getMediaFilePath(), request.getMediaType(), parsedManifestSet,
-                    segmentUrlList);
-        }
-        COSCredentials credentials;
-        if (applyUploadResponse.getTempCertificate() != null) {
-            TempCertificate certificate = applyUploadResponse.getTempCertificate();
-            credentials = new BasicSessionCredentials(certificate.getSecretId(), certificate.getSecretKey(),
-                    certificate.getToken());
-        } else {
-            credentials = new BasicCOSCredentials(secretId, secretKey);
-        }
-        ClientConfig clientConfig = new ClientConfig(new Region(applyUploadResponse.getStorageRegion()));
-        if (request.getSecureUpload()) {
-            clientConfig.setHttpProtocol(HttpProtocol.https);
-        }
-        if (haveHttpProxy) {
-            clientConfig.setHttpProxyIp(httpProfile.getProxyHost());
-            clientConfig.setHttpProxyPort(httpProfile.getProxyPort());
-            if (httpProfile.getProxyUsername() != null) {
-                clientConfig.setProxyUsername(httpProfile.getProxyUsername());
-                clientConfig.setProxyPassword(httpProfile.getProxyPassword());
-                clientConfig.setUseBasicAuth(true);
-            }
-        }
-
-        COSClient cosClient = new COSClient(credentials, clientConfig);
+        COSClient cosClient = this.createCosClient(request,applyUploadResponse);
 
         TransferManager transferManager;
         if (request.getConcurrentUploadNumber() != null && request.getConcurrentUploadNumber() > 0) {
@@ -223,21 +201,7 @@ public class VodUploadClient {
                     applyUploadResponse.getCoverStoragePath(),request.getRequestHeader());
         }
 
-        for (String segmentUrl : segmentUrlList) {
-            String segmentFilePath =
-                    Paths.get(segmentUrl).toString().replace('\\', '/');
-            String cosDir =
-                    Paths.get(applyUploadResponse.getMediaStoragePath()).getParent().toString();
-            String parentPath =
-                    Paths.get(request.getMediaFilePath()).getParent().toString();
-            String segmentPath = segmentUrl.substring(parentPath.length());
-            String segmentStoragePath =
-                    Paths.get(cosDir, segmentPath).toString().replace('\\', '/');
-
-            uploadCosDo(transferManager, segmentFilePath,
-                    applyUploadResponse.getStorageBucket(), segmentStoragePath.substring(1),
-                    request.getRequestHeader());
-        }
+        this.updateSegmentFile(vodClient,request,applyUploadResponse,transferManager);
 
         transferManager.shutdownNow();
     }
@@ -256,13 +220,70 @@ public class VodUploadClient {
     }
 
     /**
+     * Creat CosClient
+     */
+    private COSClient createCosClient(VodUploadRequest request, ApplyUploadResponse applyUploadResponse) {
+        COSCredentials credentials;
+        if (applyUploadResponse.getTempCertificate() != null) {
+            TempCertificate certificate = applyUploadResponse.getTempCertificate();
+            credentials = new BasicSessionCredentials(certificate.getSecretId(),
+                    certificate.getSecretKey(), certificate.getToken());
+        } else {
+            credentials = new BasicCOSCredentials(secretId, secretKey);
+        }
+        ClientConfig clientConfig = new ClientConfig(new Region(applyUploadResponse.getStorageRegion()));
+        if (request.getSecureUpload()) {
+            clientConfig.setHttpProtocol(HttpProtocol.https);
+        }
+        if (haveHttpProxy) {
+            clientConfig.setHttpProxyIp(httpProfile.getProxyHost());
+            clientConfig.setHttpProxyPort(httpProfile.getProxyPort());
+            if (httpProfile.getProxyUsername() != null) {
+                clientConfig.setProxyUsername(httpProfile.getProxyUsername());
+                clientConfig.setProxyPassword(httpProfile.getProxyPassword());
+                clientConfig.setUseBasicAuth(true);
+            }
+        }
+        return new COSClient(credentials, clientConfig);
+    }
+
+    /**
+     * Upload segment file
+     */
+    private void updateSegmentFile(VodClient vodClient, VodUploadRequest request,
+                                   ApplyUploadResponse applyUploadResponse,
+                                   TransferManager transferManager) throws Exception {
+        List<String> segmentUrlList = new ArrayList<>();
+        if (isManifestMediaType(request.getMediaType())) {
+            Set<String> parsedManifestSet = new HashSet<>();
+            parseManifest(vodClient, request.getMediaFilePath(), request.getMediaType(), parsedManifestSet,
+                    segmentUrlList);
+        }
+        for (String segmentUrl : segmentUrlList) {
+            String segmentFilePath =
+                    Paths.get(segmentUrl).toString().replace('\\', '/');
+            String cosDir =
+                    Paths.get(applyUploadResponse.getMediaStoragePath()).getParent().toString();
+            String parentPath =
+                    Paths.get(request.getMediaFilePath()).getParent().toString();
+            String segmentPath = segmentUrl.substring(parentPath.length());
+            String segmentStoragePath =
+                    Paths.get(cosDir, segmentPath).toString().replace('\\', '/');
+
+            uploadCosDo(transferManager, segmentFilePath,
+                    applyUploadResponse.getStorageBucket(), segmentStoragePath.substring(1),
+                    request.getRequestHeader());
+        }
+    }
+
+    /**
      * COS upload
      */
     private void uploadCosDo(TransferManager transferManager, String localPath, String bucket, String cosPath,
                              Map<String,String> headersMap) throws Exception {
         File file = new File(localPath);
         try {
-            PutObjectRequest putObjectRequest=new PutObjectRequest(bucket,cosPath,file);
+            PutObjectRequest putObjectRequest = new PutObjectRequest(bucket,cosPath,file);
             if (headersMap != null) {
                 for (Map.Entry<String, String> entry : headersMap.entrySet()) {
                     putObjectRequest.putCustomRequestHeader(entry.getKey(),entry.getValue());
@@ -383,15 +404,15 @@ public class VodUploadClient {
     private String getManifestContent(String mediaFilePath) throws VodClientException {
         String encoding = "UTF-8";
         File file = new File(mediaFilePath);
-        long filelength = file.length();
-        if (filelength>Integer.MAX_VALUE) {
+        long fileLength = file.length();
+        if (fileLength > Integer.MAX_VALUE) {
             throw new VodClientException("the file is too large");
         }
-        byte[] filecontent = new byte[(int) filelength];
+        byte[] fileContent = new byte[(int) fileLength];
         try (FileInputStream in = new FileInputStream(file)) {
-            int readLength = in.read(filecontent);
+            int readLength = in.read(fileContent);
             int surplusByte = in.read();
-            if (readLength != filelength || surplusByte != -1) {
+            if (readLength != fileLength || surplusByte != -1) {
                 throw new VodClientException("file has changed");
             }
         } catch (FileNotFoundException e) {
@@ -400,7 +421,7 @@ public class VodUploadClient {
             e.printStackTrace();
         }
         try {
-            return new String(filecontent, encoding);
+            return new String(fileContent, encoding);
         } catch (UnsupportedEncodingException e) {
             throw new VodClientException("file encoding abnormal");
         }
@@ -437,15 +458,27 @@ public class VodUploadClient {
     }
 
     private boolean isHaveHttpProxy() {
-        return httpProfile != null &&
-                (StringUtil.isNotEmpty(httpProfile.getProxyHost()) || httpProfile.getProxyPort() != 0);
+        return httpProfile != null
+                && (StringUtil.isNotEmpty(httpProfile.getProxyHost()) || httpProfile.getProxyPort() != 0);
     }
 
-    private boolean validHttpProxy() {
+    private boolean validHttpProxy() throws VodClientException {
         String proxyHost = httpProfile.getProxyHost();
         if (proxyHost == null) {
             return false;
         }
+
+        final String regex=".*[a-zA-Z]+.*";
+        Matcher m= Pattern.compile(regex).matcher(proxyHost);
+        if (m.matches()) {
+            try {
+                InetAddress inetAddress = InetAddress.getByName(proxyHost);
+                proxyHost = inetAddress.getHostAddress();
+            } catch (UnknownHostException e) {
+                throw new VodClientException("The proxy domain name is invalid");
+            }
+        }
+
         if (!IPAddress.isValidIPv4(proxyHost) && !IPAddress.isValidIPv4WithNetmask(proxyHost)) {
             if (!IPAddress.isValidIPv6(proxyHost) && !IPAddress.isValidIPv6WithNetmask(proxyHost)) {
                 return false;
