@@ -361,7 +361,14 @@ public class VodUploadClient {
         if (StringUtil.isEmpty(region)) {
             throw new VodClientException("lack region");
         }
+        this.mediaFileCheck(request);
+        this.coverFileCheck(request);
+    }
 
+    /**
+     * MediaFileCheck
+     */
+    private void mediaFileCheck(VodUploadRequest request) throws VodClientException {
         String mediaFilePath = request.getMediaFilePath();
         if (StringUtil.isEmpty(mediaFilePath)) {
             throw new VodClientException("lack media path");
@@ -379,7 +386,12 @@ public class VodUploadClient {
         if (StringUtil.isEmpty(request.getMediaName())) {
             request.setMediaName(FileUtil.getFileName(mediaFilePath));
         }
+    }
 
+    /**
+     * CoverFileCheck
+     */
+    private void coverFileCheck(VodUploadRequest request) throws VodClientException {
         String coverFilePath = request.getCoverFilePath();
         if (!StringUtil.isEmpty(coverFilePath)) {
             if (!FileUtil.isFileExist(coverFilePath)) {
@@ -393,7 +405,6 @@ public class VodUploadClient {
                 request.setCoverType(coverType);
             }
         }
-
     }
 
     /**
@@ -466,8 +477,8 @@ public class VodUploadClient {
             return false;
         }
 
-        final String regex=".*[a-zA-Z]+.*";
-        Matcher m= Pattern.compile(regex).matcher(proxyHost);
+        final String regex = ".*[a-zA-Z]+.*";
+        Matcher m = Pattern.compile(regex).matcher(proxyHost);
         if (m.matches()) {
             try {
                 InetAddress inetAddress = InetAddress.getByName(proxyHost);
