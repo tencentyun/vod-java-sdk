@@ -26,6 +26,9 @@ public class CopyUtil {
         Class<?> fatherClass = father.getClass();
         Field[] ff = fatherClass.getDeclaredFields();
         for (Field f : ff) {
+            if (f.isSynthetic()){
+                continue;
+            }
             //Get the attribute value through parent GET method
             Method mf = fatherClass.getMethod("get" + upperHeadChar(f.getName()));
             Object obj = mf.invoke(father);
@@ -39,7 +42,11 @@ public class CopyUtil {
      * Capitalize the first letter
      */
     private static String upperHeadChar(String in) {
-        String head = in.substring(0, 1);
-        return head.toUpperCase() + in.substring(1);
+        char[] charArray = in.toCharArray();
+        if(charArray[0] >= 'a' && charArray[0] <= 'z') {
+            charArray[0]-=32;
+        }
+        return new String(charArray);
     }
+
 }

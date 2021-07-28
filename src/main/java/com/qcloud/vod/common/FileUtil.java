@@ -36,6 +36,7 @@ public class FileUtil {
         String fileName = file.getName();
         int index = fileName.lastIndexOf(".");
         if (index == -1) {
+            // this should never happen
             return fileName;
         }
         return fileName.substring(0, index);

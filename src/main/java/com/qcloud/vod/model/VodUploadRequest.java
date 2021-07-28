@@ -1,16 +1,17 @@
 package com.qcloud.vod.model;
 
-import java.lang.reflect.Field;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.tencentcloudapi.common.AbstractModel;
 import com.tencentcloudapi.vod.v20180717.models.ApplyUploadRequest;
+import java.lang.reflect.Field;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 上传请求
@@ -19,16 +20,16 @@ import com.tencentcloudapi.vod.v20180717.models.ApplyUploadRequest;
  */
 public class VodUploadRequest extends ApplyUploadRequest {
 
-    private String MediaFilePath;
+    private String mediaFilePath;
 
-    private String CoverFilePath;
+    private String coverFilePath;
 
-    private Integer ConcurrentUploadNumber;
+    private Integer concurrentUploadNumber;
 
     /**
      * cos上传时使用Https上传,默认false
      */
-    private Boolean SecureUpload = false;
+    private boolean secureUpload;
 
     /**
      * 自定义请求头
@@ -38,12 +39,12 @@ public class VodUploadRequest extends ApplyUploadRequest {
     public VodUploadRequest() {}
 
     public VodUploadRequest(String mediaFilePath) {
-        this.MediaFilePath = mediaFilePath;
+        this.mediaFilePath = mediaFilePath;
     }
 
     public VodUploadRequest(String mediaFilePath, String coverFilePath) {
         this(mediaFilePath);
-        this.CoverFilePath = coverFilePath;
+        this.coverFilePath = coverFilePath;
     }
 
     public VodUploadRequest(String mediaFilePath, String coverFilePath, String procedure) {
@@ -52,27 +53,27 @@ public class VodUploadRequest extends ApplyUploadRequest {
     }
 
     public String getMediaFilePath() {
-        return MediaFilePath;
+        return mediaFilePath;
     }
 
     public void setMediaFilePath(String mediaFilePath) {
-        this.MediaFilePath = mediaFilePath;
+        this.mediaFilePath = mediaFilePath;
     }
 
     public String getCoverFilePath() {
-        return CoverFilePath;
+        return coverFilePath;
     }
 
     public void setCoverFilePath(String coverFilePath) {
-        this.CoverFilePath = coverFilePath;
+        this.coverFilePath = coverFilePath;
     }
 
     public Integer getConcurrentUploadNumber() {
-        return ConcurrentUploadNumber;
+        return concurrentUploadNumber;
     }
 
     public void setConcurrentUploadNumber(Integer concurrentUploadNumber) {
-        this.ConcurrentUploadNumber = concurrentUploadNumber;
+        this.concurrentUploadNumber = concurrentUploadNumber;
     }
 
     public static String toJsonString(VodUploadRequest obj) {
@@ -80,11 +81,11 @@ public class VodUploadRequest extends ApplyUploadRequest {
     }
 
     public Boolean getSecureUpload() {
-        return SecureUpload;
+        return secureUpload;
     }
 
     public void openSecureUpload() {
-        this.SecureUpload = true;
+        this.secureUpload = true;
     }
 
     public void putRequestHeader(String name,String value) {
@@ -110,13 +111,19 @@ public class VodUploadRequest extends ApplyUploadRequest {
         }
         // jopublic will override joadd if key conflict exists
         JsonObject jopublic = gson.toJsonTree(obj).getAsJsonObject();
+        Set<String> fieldNameSet = new HashSet<>();
+        for (Field field : obj.getClass().getFields()) {
+            fieldNameSet.add(field.getName());
+        }
         for (Map.Entry<String, JsonElement> entry : jopublic.entrySet()) {
             Object fo = null;
             Field f;
             try {
-                f = obj.getClass().getDeclaredField(entry.getKey());
-                f.setAccessible(true);
-                fo = f.get(obj);
+                if(fieldNameSet.contains(entry.getKey())){
+                    f = obj.getClass().getDeclaredField(entry.getKey());
+                    f.setAccessible(true);
+                    fo = f.get(obj);
+                }
             } catch (NoSuchFieldException | IllegalAccessException e) {
                 // this should never happen
             }

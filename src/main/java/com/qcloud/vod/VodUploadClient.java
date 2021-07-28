@@ -5,9 +5,8 @@ import com.qcloud.cos.ClientConfig;
 import com.qcloud.cos.auth.BasicCOSCredentials;
 import com.qcloud.cos.auth.BasicSessionCredentials;
 import com.qcloud.cos.auth.COSCredentials;
-import com.qcloud.cos.http.HttpMethodName;
 import com.qcloud.cos.http.HttpProtocol;
-import com.qcloud.cos.model.*;
+import com.qcloud.cos.model.PutObjectRequest;
 import com.qcloud.cos.region.Region;
 import com.qcloud.cos.transfer.TransferManager;
 import com.qcloud.cos.transfer.Upload;
@@ -23,23 +22,32 @@ import com.tencentcloudapi.common.exception.TencentCloudSDKException;
 import com.tencentcloudapi.common.profile.ClientProfile;
 import com.tencentcloudapi.common.profile.HttpProfile;
 import com.tencentcloudapi.vod.v20180717.VodClient;
-import com.tencentcloudapi.vod.v20180717.models.*;
-
+import com.tencentcloudapi.vod.v20180717.models.ApplyUploadRequest;
+import com.tencentcloudapi.vod.v20180717.models.ApplyUploadResponse;
+import com.tencentcloudapi.vod.v20180717.models.CommitUploadRequest;
+import com.tencentcloudapi.vod.v20180717.models.CommitUploadResponse;
+import com.tencentcloudapi.vod.v20180717.models.ParseStreamingManifestRequest;
+import com.tencentcloudapi.vod.v20180717.models.ParseStreamingManifestResponse;
+import com.tencentcloudapi.vod.v20180717.models.TempCertificate;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sun.net.util.IPAddressUtil;
 
 /**
  * VOD upload client
@@ -60,7 +68,7 @@ public class VodUploadClient {
 
 	private Integer retryTime;
 
-	private HttpProfile httpProfile = null;
+	private HttpProfile httpProfile;
 
 	public VodUploadClient(String secretId, String secretKey) {
 		this(secretId, secretKey, "");
@@ -87,18 +95,23 @@ public class VodUploadClient {
 			prefixCheckAndSetDefaultVal(region, request);
 		}
 
-		Credential credential = new Credential(secretId, secretKey, token);
+        boolean haveHttpProxy;
+		if((haveHttpProxy=isHaveHttpProxy())&&!validHttpProxy()){
+		    throw new VodClientException("proxy configuration error");
+        }
+
+        Credential credential = new Credential(secretId, secretKey, token);
 		VodClient vodClient;
-		if (httpProfile != null && !"".equals(httpProfile.getProxyHost()) && httpProfile.getProxyPort() != 0) {
+		if (haveHttpProxy) {
 			vodClient = new VodClient(credential, region, new ClientProfile(ClientProfile.SIGN_TC3_256, httpProfile));
 		} else {
 			vodClient = new VodClient(credential, region);
 		}
 
-		List<String> segmentUrlList = new ArrayList<String>();
+		List<String> segmentUrlList = new ArrayList<>();
 
 		if (isManifestMediaType(request.getMediaType())) {
-            Set<String> parsedManifestSet = new HashSet<String>();
+		    Set<String> parsedManifestSet = new HashSet<>();
 			parseManifest(vodClient, request.getMediaFilePath(), request.getMediaType(), parsedManifestSet,
 					segmentUrlList);
 		}
@@ -120,10 +133,10 @@ public class VodUploadClient {
         if (request.getSecureUpload()) {
             clientConfig.setHttpProtocol(HttpProtocol.https);
         }
-		if (httpProfile != null && !"".equals(httpProfile.getProxyHost()) && httpProfile.getProxyPort() != 0) {
+		if (haveHttpProxy) {
 			clientConfig.setHttpProxyIp(httpProfile.getProxyHost());
 			clientConfig.setHttpProxyPort(httpProfile.getProxyPort());
-			if (!"".equals(httpProfile.getProxyUsername())) {
+			if (httpProfile.getProxyUsername() != null) {
 				clientConfig.setProxyUsername(httpProfile.getProxyUsername());
 				clientConfig.setProxyPassword(httpProfile.getProxyPassword());
 				clientConfig.setUseBasicAuth(true);
@@ -185,7 +198,10 @@ public class VodUploadClient {
 		return uploadResponse;
 	}
 
-	public VodUploadResponse upload(final String region, final VodUploadRequest request, int timeout) throws Exception {
+    /**
+     * Upload by time limited
+     */
+	public VodUploadResponse upload(final String region, final VodUploadRequest request, int timeoutSeconds) throws Exception {
 		final VodUploadClient vodUploadClient = this;
 
 		Callable<VodUploadResponse> task = new Callable<VodUploadResponse>() {
@@ -197,11 +213,11 @@ public class VodUploadClient {
 		ExecutorService service = Executors.newSingleThreadExecutor();
 		Future<VodUploadResponse> future = service.submit(task);
 		try {
-            return future.get(timeout, TimeUnit.SECONDS);
+		    return future.get(timeoutSeconds, TimeUnit.SECONDS);
 		} catch (Exception e) {
-			throw new VodClientException(e);
+		    throw new VodClientException(e);
 		} finally {
-			service.shutdown();
+		    service.shutdown();
 		}
 	}
 
@@ -268,7 +284,7 @@ public class VodUploadClient {
 	 * Parse index file on server to get segment information
 	 */
 	private ParseStreamingManifestResponse parseStreamingManifest(VodClient client,
-			ParseStreamingManifestRequest request) throws Exception {
+                                                                  ParseStreamingManifestRequest request) throws Exception {
 		TencentCloudSDKException err = new TencentCloudSDKException("parse index file on server to get segment information fail");
 		for (int i = 0; i < retryTime; i++) {
 			try {
@@ -381,44 +397,60 @@ public class VodUploadClient {
 		}
 	}
 
+	private boolean isHaveHttpProxy() {
+        return httpProfile != null && (StringUtil.isNotEmpty(httpProfile.getProxyHost()) || httpProfile.getProxyPort() != 0);
+    }
+
+	private boolean validHttpProxy() {
+        String proxyHost = httpProfile.getProxyHost();
+        if(proxyHost == null) {
+            return false;
+        }
+        if(!IPAddressUtil.isIPv4LiteralAddress(proxyHost) && !IPAddressUtil.isIPv6LiteralAddress(proxyHost)) {
+            return false;
+        }
+        int proxyPort = httpProfile.getProxyPort();
+        return proxyPort > 0 && proxyPort <= 65535;
+    }
+
 	private Boolean isManifestMediaType(String mediaType) {
         return mediaType.equals("m3u8") || mediaType.equals("mpd");
     }
 
 	public String getSecretId() {
-		return secretId;
+	    return secretId;
 	}
 
 	public void setSecretId(String secretId) {
-		this.secretId = secretId;
+	    this.secretId = secretId;
 	}
 
 	public String getSecretKey() {
-		return secretKey;
+	    return secretKey;
 	}
 
 	public void setSecretKey(String secretKey) {
-        this.secretKey = secretKey;
+	    this.secretKey = secretKey;
     }
 
 	public Boolean getIgnoreCheck() {
-		return ignoreCheck;
+	    return ignoreCheck;
 	}
 
 	public void setIgnoreCheck(Boolean ignoreCheck) {
-		this.ignoreCheck = ignoreCheck;
+	    this.ignoreCheck = ignoreCheck;
 	}
 
 	public Integer getRetryTime() {
-		return retryTime;
+	    return retryTime;
 	}
 
 	public void setRetryTime(Integer retryTime) {
-		this.retryTime = retryTime;
+	    this.retryTime = retryTime;
 	}
 
 	public HttpProfile getHttpProfile() {
-		return httpProfile;
+        return httpProfile;
 	}
 
 	public void setHttpProfile(HttpProfile httpProfile) {
@@ -432,4 +464,5 @@ public class VodUploadClient {
 	public void setToken(String token) {
 		this.token = token;
 	}
+
 }
