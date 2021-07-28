@@ -26,7 +26,7 @@ public class CopyUtil {
         Class<?> fatherClass = father.getClass();
         Field[] ff = fatherClass.getDeclaredFields();
         for (Field f : ff) {
-            if (f.isSynthetic()){
+            if (f.isSynthetic()) {
                 continue;
             }
             //Get the attribute value through parent GET method
@@ -43,8 +43,8 @@ public class CopyUtil {
      */
     private static String upperHeadChar(String in) {
         char[] charArray = in.toCharArray();
-        if(charArray[0] >= 'a' && charArray[0] <= 'z') {
-            charArray[0]-=32;
+        if (charArray[0] >= 'a' && charArray[0] <= 'z') {
+            charArray[0] -= 32;
         }
         return new String(charArray);
     }

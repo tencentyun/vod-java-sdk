@@ -26,11 +26,11 @@ public class VodUploadClientTest {
 
     private static final Logger logger = LoggerFactory.getLogger(VodUploadClientTest.class);
 
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
-
     public static String secretId = System.getenv("SECRET_ID");
     public static String secretKey = System.getenv("SECRET_KEY");
+
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
 
     public VodUploadClient initVodUploadClient() {
         return new VodUploadClient(secretId, secretKey);
@@ -42,7 +42,7 @@ public class VodUploadClientTest {
 
     public Credentials getTemporaryCredentials() throws Exception {
         Credentials credentials;
-        try{
+        try {
             Credential cred = new Credential(secretId, secretKey);
             HttpProfile httpProfile = new HttpProfile();
             httpProfile.setEndpoint("sts.tencentcloudapi.com");
@@ -51,15 +51,17 @@ public class VodUploadClientTest {
             StsClient client = new StsClient(cred, "ap-chengdu", clientProfile);
             GetFederationTokenRequest req = new GetFederationTokenRequest();
             req.setName("customName");
-            req.setPolicy("{\n" +
-                    "\"version\": \"2.0\",\n" +
-                    "\"statement\": [\n" +
-                    "  {\n" +
-                    "    \"effect\": \"allow\",\n" +
-                    "    \"resource\": \"*\"\n" +
-                    "  }\n" +
-                    "]\n" +
-                    "}");
+            req.setPolicy(
+                    "{\n"
+                    + "\"version\": \"2.0\",\n"
+                    + "\"statement\": [\n"
+                    + "  {\n"
+                    + "    \"effect\": \"allow\",\n"
+                    + "    \"resource\": \"*\"\n"
+                    + "  }\n"
+                    + "]\n"
+                    + "}"
+            );
             req.setDurationSeconds(1800);
             GetFederationTokenResponse resp = client.GetFederationToken(req);
             System.out.println(GetFederationTokenResponse.toJsonString(resp));

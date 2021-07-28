@@ -45,9 +45,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+
+import org.bouncycastle.util.IPAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import sun.net.util.IPAddressUtil;
 
 /**
  * VOD upload client
@@ -56,300 +57,337 @@ import sun.net.util.IPAddressUtil;
  */
 public class VodUploadClient {
 
-	private static final Logger logger = LoggerFactory.getLogger(VodUploadClient.class);
+    private static final Logger logger = LoggerFactory.getLogger(VodUploadClient.class);
 
-	private String secretId;
+    private String secretId;
 
-	private String secretKey;
+    private String secretKey;
 
-	private String token;
+    private String token;
 
-	private Boolean ignoreCheck;
+    private Boolean ignoreCheck;
 
-	private Integer retryTime;
+    private Integer retryTime;
 
-	private HttpProfile httpProfile;
+    private HttpProfile httpProfile;
 
-	public VodUploadClient(String secretId, String secretKey) {
-		this(secretId, secretKey, "");
-	}
+    private boolean haveHttpProxy;
 
-	public VodUploadClient(String secretId, String secretKey, String token) {
-		this.secretId = secretId;
-		this.secretKey = secretKey;
-		this.token = token;
-		this.ignoreCheck = false;
-		this.retryTime = 3;
-	}
+    public VodUploadClient(String secretId, String secretKey) {
+        this(secretId, secretKey, "");
+    }
 
-	public VodUploadClient(String secretId, String secretKey, HttpProfile httpProfile) {
-		this(secretId, secretKey);
-		this.httpProfile = httpProfile;
-	}
+    public VodUploadClient(String secretId, String secretKey, String token) {
+        this.secretId = secretId;
+        this.secretKey = secretKey;
+        this.token = token;
+        this.ignoreCheck = false;
+        this.retryTime = 3;
+    }
 
-	/**
-	 * Upload
-	 */
-	public VodUploadResponse upload(String region, VodUploadRequest request) throws Exception {
-		if (!ignoreCheck) {
-			prefixCheckAndSetDefaultVal(region, request);
-		}
+    public VodUploadClient(String secretId, String secretKey, HttpProfile httpProfile) {
+        this(secretId, secretKey);
+        this.httpProfile = httpProfile;
+    }
 
-        boolean haveHttpProxy;
-		if((haveHttpProxy=isHaveHttpProxy())&&!validHttpProxy()){
-		    throw new VodClientException("proxy configuration error");
-        }
+    /**
+     * Upload
+     */
+    public VodUploadResponse upload(String region, VodUploadRequest request)
+            throws Exception {
+        this.beforeUploadCheck(region,request);
 
         Credential credential = new Credential(secretId, secretKey, token);
-		VodClient vodClient;
-		if (haveHttpProxy) {
-			vodClient = new VodClient(credential, region, new ClientProfile(ClientProfile.SIGN_TC3_256, httpProfile));
-		} else {
-			vodClient = new VodClient(credential, region);
-		}
-
-		List<String> segmentUrlList = new ArrayList<>();
-
-		if (isManifestMediaType(request.getMediaType())) {
-		    Set<String> parsedManifestSet = new HashSet<>();
-			parseManifest(vodClient, request.getMediaFilePath(), request.getMediaType(), parsedManifestSet,
-					segmentUrlList);
-		}
-
-		ApplyUploadRequest applyUploadRequest = ApplyUploadRequest
-				.fromJsonString(VodUploadRequest.toJsonString(request), ApplyUploadRequest.class);
-		ApplyUploadResponse applyUploadResponse = applyUpload(vodClient, applyUploadRequest);
-		logger.info("ApplyUpload Response = {}", PrintUtil.PrintObject(applyUploadResponse));
-
-		COSCredentials credentials;
-		if (applyUploadResponse.getTempCertificate() != null) {
-			TempCertificate certificate = applyUploadResponse.getTempCertificate();
-			credentials = new BasicSessionCredentials(certificate.getSecretId(), certificate.getSecretKey(),
-					certificate.getToken());
-		} else {
-			credentials = new BasicCOSCredentials(secretId, secretKey);
-		}
-		ClientConfig clientConfig = new ClientConfig(new Region(applyUploadResponse.getStorageRegion()));
-        if (request.getSecureUpload()) {
-            clientConfig.setHttpProtocol(HttpProtocol.https);
+        VodClient vodClient;
+        if (haveHttpProxy) {
+            vodClient = new VodClient(credential, region,
+                    new ClientProfile(ClientProfile.SIGN_TC3_256, httpProfile));
+        } else {
+            vodClient = new VodClient(credential, region);
         }
-		if (haveHttpProxy) {
-			clientConfig.setHttpProxyIp(httpProfile.getProxyHost());
-			clientConfig.setHttpProxyPort(httpProfile.getProxyPort());
-			if (httpProfile.getProxyUsername() != null) {
-				clientConfig.setProxyUsername(httpProfile.getProxyUsername());
-				clientConfig.setProxyPassword(httpProfile.getProxyPassword());
-				clientConfig.setUseBasicAuth(true);
-			}
-		}
 
-		COSClient cosClient = new COSClient(credentials, clientConfig);
+        ApplyUploadResponse applyUploadResponse = this.applicationUpload(request, vodClient);
+        this.uploadCos(request, vodClient, applyUploadResponse);
+        CommitUploadResponse commitUploadResponse = this.commitUpload(request, applyUploadResponse, vodClient);
 
-		TransferManager transferManager;
-		if (request.getConcurrentUploadNumber() != null && request.getConcurrentUploadNumber() > 0) {
-			ExecutorService fixedThreadPool = Executors.newFixedThreadPool(request.getConcurrentUploadNumber());
-			transferManager = new TransferManager(cosClient, fixedThreadPool);
-		} else {
-			transferManager = new TransferManager(cosClient);
-		}
+        VodUploadResponse uploadResponse;
+        try {
+            uploadResponse = CopyUtil.clone(commitUploadResponse, VodUploadResponse.class);
+        } catch (Exception e) {
+            throw new VodClientException(e);
+        }
 
-		if (StringUtil.isNotEmpty(request.getMediaType())
-				&& StringUtil.isNotEmpty(applyUploadResponse.getMediaStoragePath())) {
-			uploadCos(transferManager, request.getMediaFilePath(), applyUploadResponse.getStorageBucket(),
-					applyUploadResponse.getMediaStoragePath(),request.getRequestHeader());
-		}
-		if (StringUtil.isNotEmpty(request.getCoverType())
-				&& StringUtil.isNotEmpty(applyUploadResponse.getCoverStoragePath())) {
-			uploadCos(transferManager, request.getCoverFilePath(), applyUploadResponse.getStorageBucket(),
-					applyUploadResponse.getCoverStoragePath(),request.getRequestHeader());
-		}
-
-		for (String segmentUrl : segmentUrlList) {
-			String segmentFilePath =
-                    Paths.get(segmentUrl).toString().replace('\\', '/');
-			String cosDir =
-                    Paths.get(applyUploadResponse.getMediaStoragePath()).getParent().toString();
-			String parentPath =
-                    Paths.get(request.getMediaFilePath()).getParent().toString();
-			String segmentPath = segmentUrl.substring(parentPath.length());
-			String segmentStoragePath =
-                    Paths.get(cosDir, segmentPath).toString().replace('\\', '/');
-
-			uploadCos(transferManager, segmentFilePath,
-                    applyUploadResponse.getStorageBucket(), segmentStoragePath.substring(1),
-                    request.getRequestHeader());
-		}
-
-		transferManager.shutdownNow();
-
-		CommitUploadRequest commitUploadRequest = new CommitUploadRequest();
-		commitUploadRequest.setVodSessionKey(applyUploadResponse.getVodSessionKey());
-		commitUploadRequest.setSubAppId(request.getSubAppId());
-		CommitUploadResponse commitUploadResponse = commitUpload(vodClient, commitUploadRequest);
-		logger.info("CommitUpload Response = {}", PrintUtil.PrintObject(commitUploadResponse));
-
-		VodUploadResponse uploadResponse;
-		try {
-			uploadResponse = CopyUtil.clone(commitUploadResponse, VodUploadResponse.class);
-		} catch (Exception e) {
-			throw new VodClientException(e);
-		}
-
-		return uploadResponse;
-	}
+        return uploadResponse;
+    }
 
     /**
      * Upload by time limited
      */
-	public VodUploadResponse upload(final String region, final VodUploadRequest request, int timeoutSeconds) throws Exception {
-		final VodUploadClient vodUploadClient = this;
+    public VodUploadResponse upload(final String region, final VodUploadRequest request,
+                                    int timeoutSeconds) throws Exception {
+        final VodUploadClient vodUploadClient = this;
 
-		Callable<VodUploadResponse> task = new Callable<VodUploadResponse>() {
-			public VodUploadResponse call() throws Exception {
+        Callable<VodUploadResponse> task = new Callable<VodUploadResponse>() {
+            public VodUploadResponse call() throws Exception {
                 return vodUploadClient.upload(region, request);
-			}
-		};
+            }
+        };
 
-		ExecutorService service = Executors.newSingleThreadExecutor();
-		Future<VodUploadResponse> future = service.submit(task);
-		try {
-		    return future.get(timeoutSeconds, TimeUnit.SECONDS);
-		} catch (Exception e) {
-		    throw new VodClientException(e);
-		} finally {
-		    service.shutdown();
-		}
-	}
+        ExecutorService service = Executors.newSingleThreadExecutor();
+        Future<VodUploadResponse> future = service.submit(task);
+        try {
+            return future.get(timeoutSeconds, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            throw new VodClientException(e);
+        } finally {
+            service.shutdown();
+        }
+    }
 
-	/**
-	 * COS upload
-	 */
-	private void uploadCos(TransferManager transferManager, String localPath, String bucket, String cosPath,
-                           Map<String,String> headersMap) throws Exception {
-		File file = new File(localPath);
-		try {
+    /**
+     * beforeUploadCheck
+     */
+    private void beforeUploadCheck(String region, VodUploadRequest request) throws VodClientException {
+        if (!ignoreCheck) {
+            prefixCheckAndSetDefaultVal(region, request);
+        }
+        if ((haveHttpProxy=isHaveHttpProxy())&&!validHttpProxy()) {
+            throw new VodClientException("proxy configuration error");
+        }
+    }
+
+    /**
+     * Step 1: Application upload
+     */
+    private ApplyUploadResponse applicationUpload(VodUploadRequest request, VodClient vodClient) throws Exception {
+        ApplyUploadRequest applyUploadRequest = ApplyUploadRequest
+                .fromJsonString(VodUploadRequest.toJsonString(request), ApplyUploadRequest.class);
+        ApplyUploadResponse applyUploadResponse = applyUploadDo(vodClient, applyUploadRequest);
+        logger.info("ApplyUpload Response = {}", PrintUtil.printObject(applyUploadResponse));
+        return applyUploadResponse;
+    }
+
+    /**
+     * Step 2: upload file to cos
+     */
+    private void uploadCos(VodUploadRequest request, VodClient vodClient,
+                           ApplyUploadResponse applyUploadResponse) throws Exception {
+        List<String> segmentUrlList = new ArrayList<>();
+
+        if (isManifestMediaType(request.getMediaType())) {
+            Set<String> parsedManifestSet = new HashSet<>();
+            parseManifest(vodClient, request.getMediaFilePath(), request.getMediaType(), parsedManifestSet,
+                    segmentUrlList);
+        }
+        COSCredentials credentials;
+        if (applyUploadResponse.getTempCertificate() != null) {
+            TempCertificate certificate = applyUploadResponse.getTempCertificate();
+            credentials = new BasicSessionCredentials(certificate.getSecretId(), certificate.getSecretKey(),
+                    certificate.getToken());
+        } else {
+            credentials = new BasicCOSCredentials(secretId, secretKey);
+        }
+        ClientConfig clientConfig = new ClientConfig(new Region(applyUploadResponse.getStorageRegion()));
+        if (request.getSecureUpload()) {
+            clientConfig.setHttpProtocol(HttpProtocol.https);
+        }
+        if (haveHttpProxy) {
+            clientConfig.setHttpProxyIp(httpProfile.getProxyHost());
+            clientConfig.setHttpProxyPort(httpProfile.getProxyPort());
+            if (httpProfile.getProxyUsername() != null) {
+                clientConfig.setProxyUsername(httpProfile.getProxyUsername());
+                clientConfig.setProxyPassword(httpProfile.getProxyPassword());
+                clientConfig.setUseBasicAuth(true);
+            }
+        }
+
+        COSClient cosClient = new COSClient(credentials, clientConfig);
+
+        TransferManager transferManager;
+        if (request.getConcurrentUploadNumber() != null && request.getConcurrentUploadNumber() > 0) {
+            ExecutorService fixedThreadPool =
+                    Executors.newFixedThreadPool(request.getConcurrentUploadNumber());
+            transferManager = new TransferManager(cosClient, fixedThreadPool);
+        } else {
+            transferManager = new TransferManager(cosClient);
+        }
+
+        if (StringUtil.isNotEmpty(request.getMediaType())
+                && StringUtil.isNotEmpty(applyUploadResponse.getMediaStoragePath())) {
+            uploadCosDo(transferManager, request.getMediaFilePath(), applyUploadResponse.getStorageBucket(),
+                    applyUploadResponse.getMediaStoragePath(),request.getRequestHeader());
+        }
+        if (StringUtil.isNotEmpty(request.getCoverType())
+                && StringUtil.isNotEmpty(applyUploadResponse.getCoverStoragePath())) {
+            uploadCosDo(transferManager, request.getCoverFilePath(), applyUploadResponse.getStorageBucket(),
+                    applyUploadResponse.getCoverStoragePath(),request.getRequestHeader());
+        }
+
+        for (String segmentUrl : segmentUrlList) {
+            String segmentFilePath =
+                    Paths.get(segmentUrl).toString().replace('\\', '/');
+            String cosDir =
+                    Paths.get(applyUploadResponse.getMediaStoragePath()).getParent().toString();
+            String parentPath =
+                    Paths.get(request.getMediaFilePath()).getParent().toString();
+            String segmentPath = segmentUrl.substring(parentPath.length());
+            String segmentStoragePath =
+                    Paths.get(cosDir, segmentPath).toString().replace('\\', '/');
+
+            uploadCosDo(transferManager, segmentFilePath,
+                    applyUploadResponse.getStorageBucket(), segmentStoragePath.substring(1),
+                    request.getRequestHeader());
+        }
+
+        transferManager.shutdownNow();
+    }
+
+    /**
+     * Step 3: commitUpload
+     */
+    private CommitUploadResponse commitUpload(VodUploadRequest request, ApplyUploadResponse applyUploadResponse,
+                                              VodClient vodClient) throws Exception {
+        CommitUploadRequest commitUploadRequest = new CommitUploadRequest();
+        commitUploadRequest.setVodSessionKey(applyUploadResponse.getVodSessionKey());
+        commitUploadRequest.setSubAppId(request.getSubAppId());
+        CommitUploadResponse commitUploadResponse = commitUploadDo(vodClient, commitUploadRequest);
+        logger.info("CommitUpload Response = {}", PrintUtil.printObject(commitUploadResponse));
+        return commitUploadResponse;
+    }
+
+    /**
+     * COS upload
+     */
+    private void uploadCosDo(TransferManager transferManager, String localPath, String bucket, String cosPath,
+                             Map<String,String> headersMap) throws Exception {
+        File file = new File(localPath);
+        try {
             PutObjectRequest putObjectRequest=new PutObjectRequest(bucket,cosPath,file);
-            if(headersMap != null){
+            if (headersMap != null) {
                 for (Map.Entry<String, String> entry : headersMap.entrySet()) {
                     putObjectRequest.putCustomRequestHeader(entry.getKey(),entry.getValue());
                 }
             }
             Upload upload = transferManager.upload(putObjectRequest);
-			upload.waitForCompletion();
-		} catch (Exception e) {
-			logger.error("Upload Cos Err", e);
-			throw e;
-		}
-	}
+            upload.waitForCompletion();
+        } catch (Exception e) {
+            logger.error("Upload Cos Err", e);
+            throw e;
+        }
+    }
 
-	/**
-	 * Apply for upload
-	 */
-	private ApplyUploadResponse applyUpload(VodClient client, ApplyUploadRequest request) throws Exception {
-		TencentCloudSDKException err = new TencentCloudSDKException("apply for upload fail");
-		for (int i = 0; i < retryTime; i++) {
-			try {
+    /**
+     * Apply for upload
+     */
+    private ApplyUploadResponse applyUploadDo(VodClient client, ApplyUploadRequest request) throws Exception {
+        TencentCloudSDKException err = new TencentCloudSDKException("apply for upload fail");
+        for (int i = 0; i < retryTime; i++) {
+            try {
                 return client.ApplyUpload(request);
-			} catch (TencentCloudSDKException exception) {
-				if (StringUtil.isEmpty(exception.getRequestId())) {
-					err = exception;
-					continue;
-				}
-				throw exception;
-			}
-		}
-		throw err;
-	}
-
-	/**
-	 * Confirm upload
-	 */
-	private CommitUploadResponse commitUpload(VodClient client, CommitUploadRequest request) throws Exception {
-		TencentCloudSDKException err = new TencentCloudSDKException("confirm upload fail");
-		for (int i = 0; i < retryTime; i++) {
-			try {
-                return client.CommitUpload(request);
-			} catch (TencentCloudSDKException e) {
-				if (StringUtil.isEmpty(e.getRequestId())) {
-					err = e;
-					continue;
-				}
-				throw e;
-			}
-		}
+            } catch (TencentCloudSDKException exception) {
+                if (StringUtil.isEmpty(exception.getRequestId())) {
+                    err = exception;
+                    continue;
+                }
+                throw exception;
+            }
+        }
         throw err;
-	}
+    }
 
-	/**
-	 * Parse index file on server to get segment information
-	 */
-	private ParseStreamingManifestResponse parseStreamingManifest(VodClient client,
-                                                                  ParseStreamingManifestRequest request) throws Exception {
-		TencentCloudSDKException err = new TencentCloudSDKException("parse index file on server to get segment information fail");
-		for (int i = 0; i < retryTime; i++) {
-			try {
+    /**
+     * Confirm upload
+     */
+    private CommitUploadResponse commitUploadDo(VodClient client, CommitUploadRequest request) throws Exception {
+        TencentCloudSDKException err = new TencentCloudSDKException("confirm upload fail");
+        for (int i = 0; i < retryTime; i++) {
+            try {
+                return client.CommitUpload(request);
+            } catch (TencentCloudSDKException e) {
+                if (StringUtil.isEmpty(e.getRequestId())) {
+                    err = e;
+                    continue;
+                }
+                throw e;
+            }
+        }
+        throw err;
+    }
+
+    /**
+     * Parse index file on server to get segment information
+     */
+    private ParseStreamingManifestResponse parseStreamingManifest(
+            VodClient client, ParseStreamingManifestRequest request) throws Exception {
+        TencentCloudSDKException err =
+                new TencentCloudSDKException("parse index file on server to get segment information fail");
+        for (int i = 0; i < retryTime; i++) {
+            try {
                 return client.ParseStreamingManifest(request);
-			} catch (TencentCloudSDKException e) {
-				if (StringUtil.isEmpty(e.getRequestId())) {
-					err = e;
-					continue;
-				}
-				throw e;
-			}
-		}
-		throw err;
-	}
+            } catch (TencentCloudSDKException e) {
+                if (StringUtil.isEmpty(e.getRequestId())) {
+                    err = e;
+                    continue;
+                }
+                throw e;
+            }
+        }
+        throw err;
+    }
 
-	/**
-	 * Pre-check and set default values
-	 */
-	private void prefixCheckAndSetDefaultVal(String region, VodUploadRequest request) throws VodClientException {
-		if (StringUtil.isEmpty(region)) {
-			throw new VodClientException("lack region");
-		}
+    /**
+     * Pre-check and set default values
+     */
+    private void prefixCheckAndSetDefaultVal(String region, VodUploadRequest request) throws VodClientException {
+        if (StringUtil.isEmpty(region)) {
+            throw new VodClientException("lack region");
+        }
 
-		if (StringUtil.isEmpty(request.getMediaFilePath())) {
-			throw new VodClientException("lack media path");
-		}
-		if (!FileUtil.isFileExist(request.getMediaFilePath())) {
-			throw new VodClientException("media path is invalid");
-		}
-		if (StringUtil.isEmpty(request.getMediaType())) {
-			String mediaType = FileUtil.getFileType(request.getMediaFilePath());
-			if ("".equals(mediaType)) {
-				throw new VodClientException("lack media type");
-			}
-			request.setMediaType(mediaType);
-		}
-		if (StringUtil.isEmpty(request.getMediaName())) {
-			request.setMediaName(FileUtil.getFileName(request.getMediaFilePath()));
-		}
+        String mediaFilePath = request.getMediaFilePath();
+        if (StringUtil.isEmpty(mediaFilePath)) {
+            throw new VodClientException("lack media path");
+        }
+        if (!FileUtil.isFileExist(mediaFilePath)) {
+            throw new VodClientException("media path is invalid");
+        }
+        if (StringUtil.isEmpty(request.getMediaType())) {
+            String mediaType = FileUtil.getFileType(mediaFilePath);
+            if (StringUtil.isEmpty(mediaType)) {
+                throw new VodClientException("lack media type");
+            }
+            request.setMediaType(mediaType);
+        }
+        if (StringUtil.isEmpty(request.getMediaName())) {
+            request.setMediaName(FileUtil.getFileName(mediaFilePath));
+        }
 
-		if (!StringUtil.isEmpty(request.getCoverFilePath())) {
-			if (!FileUtil.isFileExist(request.getCoverFilePath())) {
-				throw new VodClientException("cover path is invalid");
-			}
-			if (StringUtil.isEmpty(request.getCoverType())) {
-				String coverType = FileUtil.getFileType(request.getCoverFilePath());
-				if ("".equals(coverType)) {
-					throw new VodClientException("lack cover type");
-				}
-				request.setCoverType(coverType);
-			}
-		}
-	}
+        String coverFilePath = request.getCoverFilePath();
+        if (!StringUtil.isEmpty(coverFilePath)) {
+            if (!FileUtil.isFileExist(coverFilePath)) {
+                throw new VodClientException("cover path is invalid");
+            }
+            if (StringUtil.isEmpty(request.getCoverType())) {
+                String coverType = FileUtil.getFileType(coverFilePath);
+                if (StringUtil.isEmpty(coverType)) {
+                    throw new VodClientException("lack cover type");
+                }
+                request.setCoverType(coverType);
+            }
+        }
 
-	/**
-	 * Get index file content
-	 */
-	private String getManifestContent(String mediaFilePath) throws VodClientException, IOException {
-		String encoding = "UTF-8";
-		File file = new File(mediaFilePath);
-		long filelength = file.length();
-		if(filelength>Integer.MAX_VALUE){
+    }
+
+    /**
+     * Get index file content
+     */
+    private String getManifestContent(String mediaFilePath) throws VodClientException {
+        String encoding = "UTF-8";
+        File file = new File(mediaFilePath);
+        long filelength = file.length();
+        if (filelength>Integer.MAX_VALUE) {
             throw new VodClientException("the file is too large");
         }
-		byte[] filecontent = new byte[(int) filelength];
+        byte[] filecontent = new byte[(int) filelength];
         try (FileInputStream in = new FileInputStream(file)) {
             int readLength = in.read(filecontent);
             int surplusByte = in.read();
@@ -361,108 +399,112 @@ public class VodUploadClient {
         } catch (IOException e) {
             e.printStackTrace();
         }
-		try {
-			return new String(filecontent, encoding);
-		} catch (UnsupportedEncodingException e) {
-			throw new VodClientException("file encoding abnormal");
-		}
-	}
-
-	/**
-	 * Parse index file, which is compatible with multi-bitrate index files
-	 */
-	private void parseManifest(VodClient vodClient, String manifestFilePath, String manifestMediaType, Set<String> parsedManifestSet, List<String> segmentUrlList) throws Exception {
-		if (parsedManifestSet.contains(manifestFilePath)) {
-			throw new VodClientException("repeat manifest segment");
-		} else {
-			parsedManifestSet.add(manifestFilePath);
-		}
-		String manifestContent = getManifestContent(manifestFilePath);
-		ParseStreamingManifestRequest parseStreamingManifestRequest = new ParseStreamingManifestRequest();
-		parseStreamingManifestRequest.setMediaManifestContent(manifestContent);
-		parseStreamingManifestRequest.setManifestType(manifestMediaType);
-		ParseStreamingManifestResponse parseStreamingManifestResponse = parseStreamingManifest(vodClient,
-				parseStreamingManifestRequest);
-		String[] segmentUrls = parseStreamingManifestResponse.getMediaSegmentSet();
-		if (segmentUrls != null) {
-			for (String segmentUrl : segmentUrls) {
-				String mediaType = FileUtil.getFileType(segmentUrl);
-				String mediaFilePath = Paths.get(Paths.get(manifestFilePath).getParent().toString(), segmentUrl)
-						.toString();
-				segmentUrlList.add(mediaFilePath);
-				if (isManifestMediaType(mediaType)) {
-					parseManifest(vodClient, mediaFilePath, mediaType, parsedManifestSet, segmentUrlList);
-				}
-			}
-		}
-	}
-
-	private boolean isHaveHttpProxy() {
-        return httpProfile != null && (StringUtil.isNotEmpty(httpProfile.getProxyHost()) || httpProfile.getProxyPort() != 0);
+        try {
+            return new String(filecontent, encoding);
+        } catch (UnsupportedEncodingException e) {
+            throw new VodClientException("file encoding abnormal");
+        }
     }
 
-	private boolean validHttpProxy() {
+    /**
+     * Parse index file, which is compatible with multi-bitrate index files
+     */
+    private void parseManifest(VodClient vodClient, String manifestFilePath, String manifestMediaType,
+                               Set<String> parsedManifestSet, List<String> segmentUrlList) throws Exception {
+        if (parsedManifestSet.contains(manifestFilePath)) {
+            throw new VodClientException("repeat manifest segment");
+        } else {
+            parsedManifestSet.add(manifestFilePath);
+        }
+        String manifestContent = getManifestContent(manifestFilePath);
+        ParseStreamingManifestRequest parseStreamingManifestRequest = new ParseStreamingManifestRequest();
+        parseStreamingManifestRequest.setMediaManifestContent(manifestContent);
+        parseStreamingManifestRequest.setManifestType(manifestMediaType);
+        ParseStreamingManifestResponse parseStreamingManifestResponse = parseStreamingManifest(vodClient,
+                parseStreamingManifestRequest);
+        String[] segmentUrls = parseStreamingManifestResponse.getMediaSegmentSet();
+        if (segmentUrls != null) {
+            for (String segmentUrl : segmentUrls) {
+                String mediaType = FileUtil.getFileType(segmentUrl);
+                String mediaFilePath = Paths.get(Paths.get(manifestFilePath).getParent().toString(), segmentUrl)
+                        .toString();
+                segmentUrlList.add(mediaFilePath);
+                if (isManifestMediaType(mediaType)) {
+                    parseManifest(vodClient, mediaFilePath, mediaType, parsedManifestSet, segmentUrlList);
+                }
+            }
+        }
+    }
+
+    private boolean isHaveHttpProxy() {
+        return httpProfile != null &&
+                (StringUtil.isNotEmpty(httpProfile.getProxyHost()) || httpProfile.getProxyPort() != 0);
+    }
+
+    private boolean validHttpProxy() {
         String proxyHost = httpProfile.getProxyHost();
-        if(proxyHost == null) {
+        if (proxyHost == null) {
             return false;
         }
-        if(!IPAddressUtil.isIPv4LiteralAddress(proxyHost) && !IPAddressUtil.isIPv6LiteralAddress(proxyHost)) {
-            return false;
+        if (!IPAddress.isValidIPv4(proxyHost) && !IPAddress.isValidIPv4WithNetmask(proxyHost)) {
+            if (!IPAddress.isValidIPv6(proxyHost) && !IPAddress.isValidIPv6WithNetmask(proxyHost)) {
+                return false;
+            }
         }
         int proxyPort = httpProfile.getProxyPort();
         return proxyPort > 0 && proxyPort <= 65535;
     }
 
-	private Boolean isManifestMediaType(String mediaType) {
-        return mediaType.equals("m3u8") || mediaType.equals("mpd");
+    private Boolean isManifestMediaType(String mediaType) {
+        return "m3u8".equals(mediaType) || "mpd".equals(mediaType);
     }
 
-	public String getSecretId() {
-	    return secretId;
-	}
-
-	public void setSecretId(String secretId) {
-	    this.secretId = secretId;
-	}
-
-	public String getSecretKey() {
-	    return secretKey;
-	}
-
-	public void setSecretKey(String secretKey) {
-	    this.secretKey = secretKey;
+    public String getSecretId() {
+        return secretId;
     }
 
-	public Boolean getIgnoreCheck() {
-	    return ignoreCheck;
-	}
+    public void setSecretId(String secretId) {
+        this.secretId = secretId;
+    }
 
-	public void setIgnoreCheck(Boolean ignoreCheck) {
-	    this.ignoreCheck = ignoreCheck;
-	}
+    public String getSecretKey() {
+        return secretKey;
+    }
 
-	public Integer getRetryTime() {
-	    return retryTime;
-	}
+    public void setSecretKey(String secretKey) {
+        this.secretKey = secretKey;
+    }
 
-	public void setRetryTime(Integer retryTime) {
-	    this.retryTime = retryTime;
-	}
+    public Boolean getIgnoreCheck() {
+        return ignoreCheck;
+    }
 
-	public HttpProfile getHttpProfile() {
+    public void setIgnoreCheck(Boolean ignoreCheck) {
+        this.ignoreCheck = ignoreCheck;
+    }
+
+    public Integer getRetryTime() {
+        return retryTime;
+    }
+
+    public void setRetryTime(Integer retryTime) {
+        this.retryTime = retryTime;
+    }
+
+    public HttpProfile getHttpProfile() {
         return httpProfile;
-	}
+    }
 
-	public void setHttpProfile(HttpProfile httpProfile) {
-		this.httpProfile = httpProfile;
-	}
+    public void setHttpProfile(HttpProfile httpProfile) {
+        this.httpProfile = httpProfile;
+    }
 
-	public String getToken() {
-		return token;
-	}
+    public String getToken() {
+        return token;
+    }
 
-	public void setToken(String token) {
-		this.token = token;
-	}
+    public void setToken(String token) {
+        this.token = token;
+    }
 
 }

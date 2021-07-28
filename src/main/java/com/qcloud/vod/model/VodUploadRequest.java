@@ -89,14 +89,14 @@ public class VodUploadRequest extends ApplyUploadRequest {
     }
 
     public void putRequestHeader(String name,String value) {
-        if(this.headersMap == null){
+        if (this.headersMap == null) {
             this.headersMap = new HashMap<>();
         }
         this.headersMap.put(name,value);
     }
 
     public Map<String,String> getRequestHeader() {
-        if(this.headersMap != null) {
+        if (this.headersMap != null) {
             return Collections.unmodifiableMap(this.headersMap);
         }
         return null;
@@ -119,7 +119,7 @@ public class VodUploadRequest extends ApplyUploadRequest {
             Object fo = null;
             Field f;
             try {
-                if(fieldNameSet.contains(entry.getKey())){
+                if (fieldNameSet.contains(entry.getKey())) {
                     f = obj.getClass().getDeclaredField(entry.getKey());
                     f.setAccessible(true);
                     fo = f.get(obj);
