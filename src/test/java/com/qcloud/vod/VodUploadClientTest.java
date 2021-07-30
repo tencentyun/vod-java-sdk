@@ -1,5 +1,9 @@
 package com.qcloud.vod;
 
+import com.qcloud.vod.common.CopyUtil;
+import com.qcloud.vod.common.FileUtil;
+import com.qcloud.vod.common.PrintUtil;
+import com.qcloud.vod.common.StringUtil;
 import com.qcloud.vod.exception.VodClientException;
 import com.qcloud.vod.model.VodUploadRequest;
 import com.qcloud.vod.model.VodUploadResponse;
@@ -224,7 +228,23 @@ public class VodUploadClientTest {
         HttpProfile httpProfile = new HttpProfile();
         httpProfile.setProtocol("http://");
         VodUploadClient client = initVodUploadClientCustomHttpProfile(httpProfile);
+        client.setRetryCount(10);
+        if (client.getRetryCount() != 10) {
+            logger.error("retryCount error");
+        }
         VodUploadResponse response = client.upload("ap-guangzhou", request);
+        logger.info("Upload FileId = {}", response.getFileId());
+    }
+
+    @Test
+    public void customRetryCount() throws Exception {
+        VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4");
+        VodUploadClient client = initVodUploadClient();
+        client.setRetryCount(10);
+        VodUploadResponse response = client.upload("ap-guangzhou", request);
+        if (client.getRetryCount() != 10) {
+            logger.error("retryCount error");
+        }
         logger.info("Upload FileId = {}", response.getFileId());
     }
 
@@ -275,5 +295,110 @@ public class VodUploadClientTest {
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
     }
+
+    @Test
+    public void copyUtilTest() throws Exception {
+        F f = new F();
+        C c = CopyUtil.clone(f, C.class);
+        logger.info(c.toString());
+    }
+
+    @Test
+    public void FileUtilTest() throws VodClientException {
+        thrown.expect(VodClientException.class);
+        thrown.expectMessage("FilePath cannot be blank");
+        String filePath = "video/Wildlife.mp4";
+        Boolean fileExist = FileUtil.isFileExist(filePath);
+        String fileName = FileUtil.getFileName(filePath);
+        String fileType = FileUtil.getFileType(filePath);
+        logger.info("{},{},{}",fileExist,fileName,fileType);
+        filePath = "";
+        fileExist = FileUtil.isFileExist(filePath);
+        fileName = FileUtil.getFileName(filePath);
+        fileType = FileUtil.getFileType(filePath);
+        logger.info("{},{},{}",fileExist,fileName,fileType);
+        filePath = null;
+        fileExist = FileUtil.isFileExist(filePath);
+        fileName = FileUtil.getFileName(filePath);
+        fileType = FileUtil.getFileType(filePath);
+        logger.info("{},{},{}",fileExist,fileName,fileType);
+    }
+
+    @Test
+    public void PrintUtilTest() {
+        F f = new F();
+        logger.info(PrintUtil.printObject(f));
+        f = null;
+        logger.info(PrintUtil.printObject(f));
+    }
+
+    @Test
+    public void StringUtilTest() {
+        String str = "vod-java-sdk";
+        boolean isBlank = StringUtil.isBlank(str);
+        boolean notBlank = StringUtil.isNotBlank(str);
+        boolean letterCheck = StringUtil.letterCheck(str);
+        logger.info("{},{},{}",isBlank,notBlank,letterCheck);
+        str = "127.0.0.1";
+        letterCheck = StringUtil.letterCheck(str);
+        logger.info("{}",letterCheck);
+        str = null;
+        isBlank = StringUtil.isBlank(str);
+        notBlank = StringUtil.isNotBlank(str);
+        letterCheck = StringUtil.letterCheck(str);
+        logger.info("{},{},{}",isBlank,notBlank,letterCheck);
+    }
+
+    public static class F {
+
+        private String name = "云点播SDK";
+        private Integer age = 18;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public Integer getAge() {
+            return age;
+        }
+
+        public void setAge(Integer age) {
+            this.age = age;
+        }
+    }
+
+    public static class C extends F {
+        private String name;
+        private Integer age;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public Integer getAge() {
+            return age;
+        }
+
+        public void setAge(Integer age) {
+            this.age = age;
+        }
+        @Override
+        public String toString() {
+            return "C{" +
+                    "name='" + name + '\'' +
+                    ", age=" + age +
+                    '}';
+        }
+    }
+
+
 
 }

@@ -14,7 +14,6 @@ import com.qcloud.cos.transfer.Upload;
 import com.qcloud.vod.common.CopyUtil;
 import com.qcloud.vod.common.FileUtil;
 import com.qcloud.vod.common.PrintUtil;
-import com.qcloud.vod.common.RegularUtil;
 import com.qcloud.vod.common.StringUtil;
 import com.qcloud.vod.exception.VodClientException;
 import com.qcloud.vod.model.VodUploadRequest;
@@ -271,6 +270,11 @@ public class VodUploadClient {
                     segmentUrlList);
         }
         for (String segmentUrl : segmentUrlList) {
+            if (!FileUtil.isFileExist(segmentUrl)) {
+                StringBuilder sb = new StringBuilder();
+                sb.append("file:").append(request.getMediaFilePath()).append(",the").append(segmentUrl).append("file does not exist");
+                throw new VodClientException(sb.toString());
+            }
             String cosDir =
                     Paths.get(applyUploadResponse.getMediaStoragePath()).getParent().toString();
             String parentPath =
@@ -470,7 +474,7 @@ public class VodUploadClient {
     private void defaultDomainProxyPort() {
         String proxyHost = httpProfile.getProxyHost();
         // Caller set domain proxy
-        if (RegularUtil.letterCheck(proxyHost) && httpProfile.getProxyPort() == 0) {
+        if (StringUtil.letterCheck(proxyHost) && httpProfile.getProxyPort() == 0) {
             // The proxyPort cannot be set based on the protocol method because it is not a cos upload configuration
             logger.info("proxyPort default setting is port 80");
             httpProfile.setProxyPort(80);
