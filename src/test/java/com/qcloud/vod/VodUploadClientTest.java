@@ -53,17 +53,7 @@ public class VodUploadClientTest {
             StsClient client = new StsClient(cred, "ap-chengdu", clientProfile);
             GetFederationTokenRequest req = new GetFederationTokenRequest();
             req.setName("customName");
-            req.setPolicy(
-                    "{\n"
-                    + "\"version\": \"2.0\",\n"
-                    + "\"statement\": [\n"
-                    + "  {\n"
-                    + "    \"effect\": \"allow\",\n"
-                    + "    \"resource\": \"*\"\n"
-                    + "  }\n"
-                    + "]\n"
-                    + "}"
-            );
+            req.setPolicy("{\"version\": \"2.0\",\"statement\": [{\"effect\": \"allow\",\"resource\": \"*\"}]}");
             req.setDurationSeconds(1800);
             GetFederationTokenResponse resp = client.GetFederationToken(req);
             System.out.println(GetFederationTokenResponse.toJsonString(resp));
@@ -217,20 +207,56 @@ public class VodUploadClientTest {
     }
 
     @Test
-    public void customHttpProfile() throws Exception {
+    public void invalidProxyDomain() throws Exception {
+        thrown.expect(VodClientException.class);
+        thrown.expectMessage("The proxy domain name is invalid");
         VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4");
         HttpProfile httpProfile = new HttpProfile();
+        httpProfile.setProxyHost("@vod@.tencent.com");
         VodUploadClient client = initVodUploadClientCustomHttpProfile(httpProfile);
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
     }
 
     @Test
-    public void temporaryClient() throws Exception {
+    public void deferProxyPort() throws Exception {
+        thrown.expect(TencentCloudSDKException.class);
+        thrown.expectMessage("java.net.UnknownHostException-@.noHostUrl.noHostUrl");
+        VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4");
+        HttpProfile httpProfile = new HttpProfile();
+        httpProfile.setProxyHost("@.noHostUrl.noHostUrl");
+        VodUploadClient client = initVodUploadClientCustomHttpProfile(httpProfile);
+        VodUploadResponse response = client.upload("ap-guangzhou", request);
+        logger.info("Upload FileId = {}", response.getFileId());
+    }
+
+    @Test
+    public void customHttpProfileUpload() throws Exception {
+        VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4");
+        HttpProfile httpProfile = new HttpProfile();
+        httpProfile.setProtocol("http://");
+        VodUploadClient client = initVodUploadClientCustomHttpProfile(httpProfile);
+        VodUploadResponse response = client.upload("ap-guangzhou", request);
+        logger.info("Upload FileId = {}", response.getFileId());
+    }
+
+    @Test
+    public void subApplication() throws Exception {
+        thrown.expect(TencentCloudSDKException.class);
+        thrown.expectMessage("InvalidParameterValue.SubAppId-invalid subappid");
+        VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4");
+        request.setSubAppId(13008543630L);
+        VodUploadClient client = initVodUploadClient();
+        VodUploadResponse response = client.upload("ap-guangzhou", request);
+        logger.info("Upload FileId = {}", response.getFileId());
+    }
+
+    @Test
+    public void temporarySTSClient() throws Exception {
         VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4");
         request.putRequestHeader("header-name","header-value");
         VodUploadClient client = initSTSVodUploadClient();
-        VodUploadResponse response = client.upload("ap-guangzhou", request,10);
+        VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
     }
 
@@ -245,10 +271,20 @@ public class VodUploadClientTest {
 
     @Test
     public void uploadTimeOut() throws Exception {
-        VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4",
-                "","LongVideoPreset");
+        VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4");
         VodUploadClient client = initVodUploadClient();
         VodUploadResponse response = client.upload("ap-guangzhou", request,10);
+        logger.info("Upload FileId = {}", response.getFileId());
+    }
+
+    @Test
+    public void ignorePreCheckSettingsToUpload() throws Exception {
+        thrown.expect(TencentCloudSDKException.class);
+        thrown.expectMessage("MissingParameter-The request is missing a required parameter `MediaType`.");
+        VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4");
+        VodUploadClient client = initVodUploadClient();
+        client.setIgnorePreCheckSettings(true);
+        VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
     }
 

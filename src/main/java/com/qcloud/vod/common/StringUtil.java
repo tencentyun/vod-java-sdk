@@ -7,11 +7,12 @@ package com.qcloud.vod.common;
  */
 public class StringUtil {
 
-    public static Boolean isEmpty(String str) {
-        return str == null || str.length() == 0;
+    public static Boolean isBlank(String str) {
+        return str == null || str.length() == 0 || str.trim().length() == 0;
     }
 
-    public static Boolean isNotEmpty(String str) {
-        return !isEmpty(str);
+    public static Boolean isNotBlank(String str) {
+        return !isBlank(str);
     }
+
 }
