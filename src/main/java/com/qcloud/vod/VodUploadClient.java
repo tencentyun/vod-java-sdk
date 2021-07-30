@@ -69,9 +69,7 @@ public class VodUploadClient {
 
     private Integer retryCount = 3;
 
-    private boolean ignorePreCheckSettings;
-
-    private boolean haveHttpProxy;
+    private boolean ignorePreCheck;
 
     public VodUploadClient(String secretId, String secretKey) {
         this(secretId, secretKey, "");
@@ -101,7 +99,8 @@ public class VodUploadClient {
 
         Credential credential = new Credential(secretId, secretKey, token);
         VodClient vodClient;
-        if (haveHttpProxy) {
+        if (needHttpProxy()) {
+            this.defaultDomainProxyPort();
             vodClient = new VodClient(credential, region, new ClientProfile(ClientProfile.SIGN_TC3_256, httpProfile));
         } else {
             vodClient = new VodClient(credential, region);
@@ -150,10 +149,9 @@ public class VodUploadClient {
      * BeforeUploadCheck
      */
     private void beforeUploadCheck(String region, VodUploadRequest request) throws VodClientException {
-        if (!ignorePreCheckSettings) {
+        if (!ignorePreCheck) {
             prefixCheckAndSetDefaultVal(region, request);
         }
-        haveHttpProxy = isHaveHttpProxy();
     }
 
     /**
@@ -229,7 +227,7 @@ public class VodUploadClient {
         if (request.getSecureUpload()) {
             clientConfig.setHttpProtocol(HttpProtocol.https);
         }
-        if (haveHttpProxy) {
+        if (needHttpProxy()) {
             clientConfig.setHttpProxyIp(httpProfile.getProxyHost());
             clientConfig.setHttpProxyPort(httpProfile.getProxyPort());
             if (httpProfile.getProxyUsername() != null) {
@@ -463,20 +461,20 @@ public class VodUploadClient {
     }
 
     /**
-     * Whether to have an proxy
+     * Whether to enable an proxy
      */
-    private boolean isHaveHttpProxy() {
-        if (httpProfile != null && (StringUtil.isNotBlank(httpProfile.getProxyHost()))) {
-            String proxyHost = httpProfile.getProxyHost();
-            // Caller set domain proxy
-            if (RegularUtil.letterCheck(proxyHost) && httpProfile.getProxyPort() == 0) {
-                // The proxyPort cannot be set based on the protocol method because it is not a cos upload configuration
-                logger.warn("proxyPort default setting is port 80");
-                httpProfile.setProxyPort(80);
-            }
-            return true;
+    private boolean needHttpProxy() {
+        return httpProfile != null && (StringUtil.isNotBlank(httpProfile.getProxyHost()));
+    }
+
+    private void defaultDomainProxyPort() {
+        String proxyHost = httpProfile.getProxyHost();
+        // Caller set domain proxy
+        if (RegularUtil.letterCheck(proxyHost) && httpProfile.getProxyPort() == 0) {
+            // The proxyPort cannot be set based on the protocol method because it is not a cos upload configuration
+            logger.info("proxyPort default setting is port 80");
+            httpProfile.setProxyPort(80);
         }
-        return false;
     }
 
     private Boolean isManifestMediaType(String mediaType) {
@@ -498,8 +496,8 @@ public class VodUploadClient {
     /**
      * If you do not set the file information inside the request, please do not set it to false.
      */
-    public void setIgnorePreCheckSettings(Boolean ignorePreCheckSettings) {
-        this.ignorePreCheckSettings = ignorePreCheckSettings;
+    public void setIgnorePreCheck(Boolean ignorePreCheck) {
+        this.ignorePreCheck = ignorePreCheck;
     }
 
     public Integer getRetryCount() {

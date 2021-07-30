@@ -52,9 +52,9 @@
         </dependency>
         
  		<dependency>
-	            <groupId>com.tencentcloudapi</groupId>
-	            <artifactId>tencentcloud-sdk-java</artifactId>
-	            <version>3.1.2</version>
+            <groupId>com.tencentcloudapi</groupId>
+            <artifactId>tencentcloud-sdk-java</artifactId>
+            <version>3.1.2</version>
 	    </dependency>
 
     </dependencies>

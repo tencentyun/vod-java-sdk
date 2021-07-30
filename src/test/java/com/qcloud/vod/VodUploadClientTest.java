@@ -271,7 +271,7 @@ public class VodUploadClientTest {
         thrown.expectMessage("MissingParameter-The request is missing a required parameter `MediaType`.");
         VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4");
         VodUploadClient client = initVodUploadClient();
-        client.setIgnorePreCheckSettings(true);
+        client.setIgnorePreCheck(true);
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
     }
