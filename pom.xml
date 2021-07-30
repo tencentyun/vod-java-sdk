@@ -57,19 +57,6 @@
 	            <version>3.1.2</version>
 	    </dependency>
 
-        <!--TODO 下面为新加-->
-        <dependency>
-            <groupId>org.jacoco</groupId>
-            <artifactId>jacoco-maven-plugin</artifactId>
-            <version>0.8.5</version>
-        </dependency>
-        <dependency>
-            <groupId>org.jetbrains</groupId>
-            <artifactId>annotations-java5</artifactId>
-            <version>RELEASE</version>
-            <scope>compile</scope>
-        </dependency>
-
     </dependencies>
 
     <scm>
