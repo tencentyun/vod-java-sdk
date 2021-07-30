@@ -31,7 +31,6 @@ import com.tencentcloudapi.vod.v20180717.models.CommitUploadResponse;
 import com.tencentcloudapi.vod.v20180717.models.ParseStreamingManifestRequest;
 import com.tencentcloudapi.vod.v20180717.models.ParseStreamingManifestResponse;
 import com.tencentcloudapi.vod.v20180717.models.TempCertificate;
-import org.bouncycastle.util.IPAddress;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.File;
@@ -39,8 +38,6 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -469,7 +466,7 @@ public class VodUploadClient {
      * Whether to have an proxy
      */
     private boolean isHaveHttpProxy() {
-        if(httpProfile != null && (StringUtil.isNotBlank(httpProfile.getProxyHost()))) {
+        if (httpProfile != null && (StringUtil.isNotBlank(httpProfile.getProxyHost()))) {
             String proxyHost = httpProfile.getProxyHost();
             // Caller set domain proxy
             if (RegularUtil.letterCheck(proxyHost) && httpProfile.getProxyPort() == 0) {
