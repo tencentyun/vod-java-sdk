@@ -207,18 +207,6 @@ public class VodUploadClientTest {
     }
 
     @Test
-    public void invalidProxyDomain() throws Exception {
-        thrown.expect(VodClientException.class);
-        thrown.expectMessage("The proxy domain name is invalid");
-        VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4");
-        HttpProfile httpProfile = new HttpProfile();
-        httpProfile.setProxyHost("@vod@.tencent.com");
-        VodUploadClient client = initVodUploadClientCustomHttpProfile(httpProfile);
-        VodUploadResponse response = client.upload("ap-guangzhou", request);
-        logger.info("Upload FileId = {}", response.getFileId());
-    }
-
-    @Test
     public void deferProxyPort() throws Exception {
         thrown.expect(TencentCloudSDKException.class);
         thrown.expectMessage("java.net.UnknownHostException-@.noHostUrl.noHostUrl");
