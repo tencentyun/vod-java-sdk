@@ -298,13 +298,13 @@ public class VodUploadClientTest {
 
     @Test
     public void copyUtilTest() throws Exception {
-        F f = new F();
-        C c = CopyUtil.clone(f, C.class);
+        FObject f = new FObject();
+        CObject c = CopyUtil.clone(f, CObject.class);
         logger.info(c.toString());
     }
 
     @Test
-    public void FileUtilTest() throws VodClientException {
+    public void fileUtilTest() throws VodClientException {
         thrown.expect(VodClientException.class);
         thrown.expectMessage("FilePath cannot be blank");
         String filePath = "video/Wildlife.mp4";
@@ -325,15 +325,15 @@ public class VodUploadClientTest {
     }
 
     @Test
-    public void PrintUtilTest() {
-        F f = new F();
+    public void printUtilTest() {
+        FObject f = new FObject();
         logger.info(PrintUtil.printObject(f));
         f = null;
         logger.info(PrintUtil.printObject(f));
     }
 
     @Test
-    public void StringUtilTest() {
+    public void stringUtilTest() {
         String str = "vod-java-sdk";
         boolean isBlank = StringUtil.isBlank(str);
         boolean notBlank = StringUtil.isNotBlank(str);
@@ -349,7 +349,7 @@ public class VodUploadClientTest {
         logger.info("{},{},{}",isBlank,notBlank,letterCheck);
     }
 
-    public static class F {
+    public static class FObject {
 
         private String name = "云点播SDK";
         private Integer age = 18;
@@ -371,7 +371,7 @@ public class VodUploadClientTest {
         }
     }
 
-    public static class C extends F {
+    public static class CObject extends FObject {
         private String name;
         private Integer age;
 
