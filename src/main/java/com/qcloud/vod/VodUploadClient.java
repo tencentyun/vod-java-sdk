@@ -272,7 +272,8 @@ public class VodUploadClient {
         for (String segmentUrl : segmentUrlList) {
             if (!FileUtil.isFileExist(segmentUrl)) {
                 StringBuilder sb = new StringBuilder();
-                sb.append("file:").append(request.getMediaFilePath()).append(",the").append(segmentUrl).append("file does not exist");
+                sb.append("file:").append(request.getMediaFilePath()).append(",the")
+                        .append(segmentUrl).append("file does not exist");
                 throw new VodClientException(sb.toString());
             }
             String cosDir =

@@ -224,7 +224,6 @@ public class VodUploadClientTest {
 
     @Test
     public void customHttpProfileUpload() throws Exception {
-        VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4");
         HttpProfile httpProfile = new HttpProfile();
         httpProfile.setProtocol("http://");
         VodUploadClient client = initVodUploadClientCustomHttpProfile(httpProfile);
@@ -232,6 +231,7 @@ public class VodUploadClientTest {
         if (client.getRetryCount() != 10) {
             logger.error("retryCount error");
         }
+        VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4");
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
     }
@@ -390,12 +390,16 @@ public class VodUploadClientTest {
         public void setAge(Integer age) {
             this.age = age;
         }
+
         @Override
         public String toString() {
-            return "C{" +
-                    "name='" + name + '\'' +
-                    ", age=" + age +
-                    '}';
+            return "C{"
+                    + "name='"
+                    + name
+                    + '\''
+                    + ", age="
+                    + age
+                    + '}';
         }
     }
 

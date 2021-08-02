@@ -30,7 +30,7 @@ public class CopyUtil {
      * Copy the attributes of parent class to sub-class
      * If invoke method internal send exception, throw InvocationTargetException.
      */
-    private static <F, C extends F> void copy(F father, C child) throws InvocationTargetException{
+    private static <F, C extends F> void copy(F father, C child) throws InvocationTargetException {
         Class<?> fatherClass = father.getClass();
         Field[] fields = fatherClass.getDeclaredFields();
         for (Field f : fields) {
@@ -47,7 +47,7 @@ public class CopyUtil {
                 Method mc = fatherClass.getMethod("set" + upperHeadChar(f.getName()), f.getType());
                 mc.setAccessible(true);
                 mc.invoke(child, obj);
-            }catch (NoSuchMethodException | IllegalAccessException e) {
+            } catch (NoSuchMethodException | IllegalAccessException e) {
                 // Missing method, Then don't copy
                 logger.info(e.getMessage());
             }
