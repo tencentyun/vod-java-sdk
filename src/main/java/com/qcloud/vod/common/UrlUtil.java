@@ -14,6 +14,9 @@ public class UrlUtil {
             throw new VodClientException("mediaUrl cannot be blank");
         }
         int index = mediaUrl.lastIndexOf("/");
+        if (index == -1) {
+            return "";
+        }
         String fileName = mediaUrl.substring(index);
         int typeIndex = fileName.lastIndexOf(".");
         if (typeIndex == -1) {
@@ -27,10 +30,10 @@ public class UrlUtil {
             throw new VodClientException("mediaUrl cannot be blank");
         }
         int index = mediaUrl.lastIndexOf("/");
-        if (index == -1) {
+        if (index == -1 || mediaUrl.length() == (index + 1)) {
             return "";
         }
-        String fileName = mediaUrl.substring(index);
+        String fileName = mediaUrl.substring(index + 1);
         int typeIndex = fileName.lastIndexOf(".");
         if (typeIndex == -1) {
             // this should never happen

@@ -5,6 +5,7 @@ import com.qcloud.vod.common.CopyUtil;
 import com.qcloud.vod.common.FileUtil;
 import com.qcloud.vod.common.PrintUtil;
 import com.qcloud.vod.common.StringUtil;
+import com.qcloud.vod.common.UrlUtil;
 import com.qcloud.vod.exception.VodClientException;
 import com.qcloud.vod.model.VodUploadRequest;
 import com.qcloud.vod.model.VodUploadResponse;
@@ -370,6 +371,23 @@ public class VodUploadClientTest {
         VodUploadClient client = initVodUploadClient();
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
+    }
+
+    @Test
+    public void UrlUtilTest() throws Exception{
+        String mediaUrl =
+                "1300854363.vod2.myqcloud.com/96a48d63vodcq1300854363/e40970823701925920154859610/5Gka9KfAi3MA.mp4";
+        String fileName = UrlUtil.getFileName(mediaUrl);
+        String fileType = UrlUtil.getFileType(mediaUrl);
+        logger.info("fileName:{},fileType:{}",fileName,fileType);
+        mediaUrl = "/5Gka9KfAi3MA.mp4";
+        fileName = UrlUtil.getFileName(mediaUrl);
+        fileType = UrlUtil.getFileType(mediaUrl);
+        logger.info("fileName:{},fileType:{}",fileName,fileType);
+        mediaUrl = "5Gka9KfAi3MA.mp4";
+        fileName = UrlUtil.getFileName(mediaUrl);
+        fileType = UrlUtil.getFileType(mediaUrl);
+        logger.info("fileName:{},fileType:{}",fileName,fileType);
     }
 
     @Test
