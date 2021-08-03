@@ -374,7 +374,7 @@ public class VodUploadClientTest {
     }
 
     @Test
-    public void UrlUtilTest() throws Exception{
+    public void urlUtilTest() throws Exception {
         String mediaUrl =
                 "1300854363.vod2.myqcloud.com/96a48d63vodcq1300854363/e40970823701925920154859610/5Gka9KfAi3MA.mp4";
         String fileName = UrlUtil.getFileName(mediaUrl);
