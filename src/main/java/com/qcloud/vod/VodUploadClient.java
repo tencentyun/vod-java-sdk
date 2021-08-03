@@ -333,7 +333,7 @@ public class VodUploadClient {
     private void uploadCosDo(TransferManager transferManager, PutObjectRequest putObjectRequest,
                              Map<String,String> headersMap) throws Exception {
         try {
-            if (headersMap != null ){
+            if (headersMap != null) {
                 for (Map.Entry<String, String> entry : headersMap.entrySet()) {
                     putObjectRequest.putCustomRequestHeader(entry.getKey(),entry.getValue());
                 }
@@ -351,7 +351,7 @@ public class VodUploadClient {
         return new PutObjectRequest(bucket, storagePath, file);
     }
 
-    private PutObjectRequest createPutObjectRequest(InputStream inputStream, long contentLength , String bucket,
+    private PutObjectRequest createPutObjectRequest(InputStream inputStream, long contentLength, String bucket,
                                                     String storagePath) {
         ObjectMetadata objectMetadata = new ObjectMetadata();
         if (contentLength != 0L) {
@@ -410,7 +410,7 @@ public class VodUploadClient {
         if (request instanceof VodUrlUploadRequest) {
             this.mediaUrlCheck((VodUrlUploadRequest) request);
             this.coverUrlCheck((VodUrlUploadRequest) request);
-        }else{
+        } else {
             this.mediaFileCheck(request);
             this.coverFileCheck(request);
         }

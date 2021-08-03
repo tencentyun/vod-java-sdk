@@ -26,7 +26,7 @@ import java.util.Set;
  *
  * @author alanyfwu
  */
-public class VodUrlUploadRequest extends VodUploadRequest{
+public class VodUrlUploadRequest extends VodUploadRequest {
 
     private String mediaUrl;
 
@@ -82,6 +82,9 @@ public class VodUrlUploadRequest extends VodUploadRequest{
         return coverContentLength;
     }
 
+    /**
+     * 初始化网络流式资源
+     */
     public void initUrlResources() throws IOException {
         CloseableHttpClient httpclient = null;
         HttpGet httpGet;

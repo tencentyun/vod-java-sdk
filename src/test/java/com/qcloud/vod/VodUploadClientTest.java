@@ -361,7 +361,7 @@ public class VodUploadClientTest {
     }
 
     @Test
-    public void CustomSliceSettings() throws Exception {
+    public void customSliceSettings() throws Exception {
         VodUploadRequest request = new VodUploadRequest("video/bigFile.mp4");
         request.enableSecureUpload();
         request.setConcurrentUploadNumber(3);
