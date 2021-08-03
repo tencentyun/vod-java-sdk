@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.qcloud.cos.internal.Constants;
 import com.tencentcloudapi.common.AbstractModel;
 import com.tencentcloudapi.vod.v20180717.models.ApplyUploadRequest;
 import java.lang.reflect.Field;
@@ -20,11 +21,30 @@ import java.util.Set;
  */
 public class VodUploadRequest extends ApplyUploadRequest {
 
+    /**
+     * 文件路径
+     */
     private String mediaFilePath;
 
+    /**
+     * 封面路径(可选)
+     */
     private String coverFilePath;
 
-    private Integer concurrentUploadNumber;
+    /**
+     * 上传并发线程数
+     */
+    private int concurrentUploadNumber;
+
+    /**
+     * 文件达到多大才开始分片上传(单位:byte,默认5mb)
+     */
+    private long multipartUploadThreshold = 5 * Constants.MB;
+
+    /**
+     * 分片时每一片的大小(单位:byte,默认5mb)
+     */
+    private long minimumUploadPartSize = 5 * Constants.MB;
 
     /**
      * cos上传时使用Https上传,默认false
@@ -68,7 +88,7 @@ public class VodUploadRequest extends ApplyUploadRequest {
         this.coverFilePath = coverFilePath;
     }
 
-    public Integer getConcurrentUploadNumber() {
+    public int getConcurrentUploadNumber() {
         return concurrentUploadNumber;
     }
 
@@ -76,15 +96,31 @@ public class VodUploadRequest extends ApplyUploadRequest {
         this.concurrentUploadNumber = concurrentUploadNumber;
     }
 
-    public static String toJsonString(VodUploadRequest obj) {
-        return toJsonObject(obj).toString();
+    public long getMultipartUploadThreshold() {
+        return multipartUploadThreshold;
     }
 
-    public Boolean getSecureUpload() {
+    public void setMultipartUploadThreshold(long multipartUploadThreshold) {
+        if (multipartUploadThreshold > 0) {
+            this.multipartUploadThreshold = multipartUploadThreshold;
+        }
+    }
+
+    public long getMinimumUploadPartSize() {
+        return minimumUploadPartSize;
+    }
+
+    public void setMinimumUploadPartSize(long minimumUploadPartSize) {
+        if (minimumUploadPartSize > 0) {
+            this.minimumUploadPartSize = minimumUploadPartSize;
+        }
+    }
+
+    public boolean needSecureUpload() {
         return secureUpload;
     }
 
-    public void openSecureUpload() {
+    public void enableSecureUpload() {
         this.secureUpload = true;
     }
 
@@ -100,6 +136,10 @@ public class VodUploadRequest extends ApplyUploadRequest {
             return Collections.unmodifiableMap(this.headersMap);
         }
         return null;
+    }
+
+    public static String toJsonString(VodUploadRequest obj) {
+        return toJsonObject(obj).toString();
     }
 
     private static <O extends AbstractModel> JsonObject toJsonObject(O obj) {

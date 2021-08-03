@@ -7,17 +7,21 @@ import com.qcloud.cos.auth.BasicSessionCredentials;
 import com.qcloud.cos.auth.COSCredentials;
 import com.qcloud.cos.exception.CosClientException;
 import com.qcloud.cos.http.HttpProtocol;
+import com.qcloud.cos.model.ObjectMetadata;
 import com.qcloud.cos.model.PutObjectRequest;
 import com.qcloud.cos.region.Region;
 import com.qcloud.cos.transfer.TransferManager;
+import com.qcloud.cos.transfer.TransferManagerConfiguration;
 import com.qcloud.cos.transfer.Upload;
 import com.qcloud.vod.common.CopyUtil;
 import com.qcloud.vod.common.FileUtil;
 import com.qcloud.vod.common.PrintUtil;
 import com.qcloud.vod.common.StringUtil;
+import com.qcloud.vod.common.UrlUtil;
 import com.qcloud.vod.exception.VodClientException;
 import com.qcloud.vod.model.VodUploadRequest;
 import com.qcloud.vod.model.VodUploadResponse;
+import com.qcloud.vod.model.VodUrlUploadRequest;
 import com.tencentcloudapi.common.Credential;
 import com.tencentcloudapi.common.exception.TencentCloudSDKException;
 import com.tencentcloudapi.common.profile.ClientProfile;
@@ -32,10 +36,12 @@ import com.tencentcloudapi.vod.v20180717.models.ParseStreamingManifestResponse;
 import com.tencentcloudapi.vod.v20180717.models.TempCertificate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -173,23 +179,51 @@ public class VodUploadClient {
         COSClient cosClient = this.createCosClient(request,applyUploadResponse);
 
         TransferManager transferManager;
-        if (request.getConcurrentUploadNumber() != null && request.getConcurrentUploadNumber() > 0) {
-            ExecutorService fixedThreadPool =
-                    Executors.newFixedThreadPool(request.getConcurrentUploadNumber());
+        if (request.getConcurrentUploadNumber() > 0) {
+            ExecutorService fixedThreadPool = Executors.newFixedThreadPool(request.getConcurrentUploadNumber());
             transferManager = new TransferManager(cosClient, fixedThreadPool);
         } else {
             transferManager = new TransferManager(cosClient);
         }
 
+        TransferManagerConfiguration transferManagerConfiguration = new TransferManagerConfiguration();
+        transferManagerConfiguration.setMultipartUploadThreshold(request.getMultipartUploadThreshold());
+        transferManagerConfiguration.setMinimumUploadPartSize(request.getMinimumUploadPartSize());
+        transferManager.setConfiguration(transferManagerConfiguration);
+
+        VodUrlUploadRequest vodUrlUploadRequest = null;
+        if (request instanceof VodUrlUploadRequest) {
+            vodUrlUploadRequest = (VodUrlUploadRequest) request;
+            vodUrlUploadRequest.initUrlResources();
+        }
+
         if (StringUtil.isNotBlank(request.getMediaType())
                 && StringUtil.isNotBlank(applyUploadResponse.getMediaStoragePath())) {
-            uploadCosDo(transferManager, request.getMediaFilePath(), applyUploadResponse.getStorageBucket(),
-                    applyUploadResponse.getMediaStoragePath(),request.getRequestHeader());
+            PutObjectRequest putObjectRequest;
+            if (vodUrlUploadRequest != null && vodUrlUploadRequest.getMediaUrl() != null
+                    && vodUrlUploadRequest.getMediaInputStream() != null) {
+                putObjectRequest = this.createPutObjectRequest(vodUrlUploadRequest.getMediaInputStream(),
+                        vodUrlUploadRequest.getMediaContentLength(), applyUploadResponse.getStorageBucket(),
+                        applyUploadResponse.getMediaStoragePath());
+            } else {
+                putObjectRequest = this.createPutObjectRequest(request.getMediaFilePath(),
+                        applyUploadResponse.getStorageBucket(), applyUploadResponse.getMediaStoragePath());
+            }
+            uploadCosDo(transferManager, putObjectRequest, request.getRequestHeader());
         }
         if (StringUtil.isNotBlank(request.getCoverType())
                 && StringUtil.isNotBlank(applyUploadResponse.getCoverStoragePath())) {
-            uploadCosDo(transferManager, request.getCoverFilePath(), applyUploadResponse.getStorageBucket(),
-                    applyUploadResponse.getCoverStoragePath(),request.getRequestHeader());
+            PutObjectRequest putObjectRequest;
+            if (vodUrlUploadRequest != null && vodUrlUploadRequest.getCoverUrl() != null
+                    && vodUrlUploadRequest.getCoverInputStream() != null) {
+                putObjectRequest = this.createPutObjectRequest(vodUrlUploadRequest.getCoverInputStream(),
+                        vodUrlUploadRequest.getCoverContentLength(),applyUploadResponse.getStorageBucket(),
+                        applyUploadResponse.getCoverStoragePath());
+            } else {
+                putObjectRequest = this.createPutObjectRequest(request.getCoverFilePath(),
+                        applyUploadResponse.getStorageBucket(), applyUploadResponse.getCoverStoragePath());
+            }
+            uploadCosDo(transferManager, putObjectRequest, request.getRequestHeader());
         }
 
         this.updateSegmentFile(vodClient,request,applyUploadResponse,transferManager);
@@ -223,7 +257,7 @@ public class VodUploadClient {
             credentials = new BasicCOSCredentials(secretId, secretKey);
         }
         ClientConfig clientConfig = new ClientConfig(new Region(applyUploadResponse.getStorageRegion()));
-        if (request.getSecureUpload()) {
+        if (request.needSecureUpload()) {
             clientConfig.setHttpProtocol(HttpProtocol.https);
         }
         if (needHttpProxy()) {
@@ -286,21 +320,20 @@ public class VodUploadClient {
             String segmentFilePath =
                     Paths.get(segmentUrl).toString().replace('\\', '/');
 
-            uploadCosDo(transferManager, segmentFilePath,
-                    applyUploadResponse.getStorageBucket(), segmentStoragePath.substring(1),
-                    request.getRequestHeader());
+            PutObjectRequest putObjectRequest =
+                    this.createPutObjectRequest(segmentFilePath, applyUploadResponse.getStorageBucket(),
+                            segmentStoragePath);
+            uploadCosDo(transferManager, putObjectRequest, request.getRequestHeader());
         }
     }
 
     /**
      * COS upload
      */
-    private void uploadCosDo(TransferManager transferManager, String localPath, String bucket, String cosPath,
+    private void uploadCosDo(TransferManager transferManager, PutObjectRequest putObjectRequest,
                              Map<String,String> headersMap) throws Exception {
-        File file = new File(localPath);
         try {
-            PutObjectRequest putObjectRequest = new PutObjectRequest(bucket,cosPath,file);
-            if (headersMap != null) {
+            if (headersMap != null ){
                 for (Map.Entry<String, String> entry : headersMap.entrySet()) {
                     putObjectRequest.putCustomRequestHeader(entry.getKey(),entry.getValue());
                 }
@@ -311,6 +344,20 @@ public class VodUploadClient {
             logger.error("Upload Cos Err", e);
             throw e;
         }
+    }
+
+    private PutObjectRequest createPutObjectRequest(String filePath, String bucket, String storagePath) {
+        File file = new File(filePath);
+        return new PutObjectRequest(bucket, storagePath, file);
+    }
+
+    private PutObjectRequest createPutObjectRequest(InputStream inputStream, long contentLength , String bucket,
+                                                    String storagePath) {
+        ObjectMetadata objectMetadata = new ObjectMetadata();
+        if (contentLength != 0L) {
+            objectMetadata.setContentLength(contentLength);
+        }
+        return new PutObjectRequest(bucket, storagePath, inputStream, objectMetadata);
     }
 
     /**
@@ -360,8 +407,13 @@ public class VodUploadClient {
         if (StringUtil.isBlank(region)) {
             throw new VodClientException("lack region");
         }
-        this.mediaFileCheck(request);
-        this.coverFileCheck(request);
+        if (request instanceof VodUrlUploadRequest) {
+            this.mediaUrlCheck((VodUrlUploadRequest) request);
+            this.coverUrlCheck((VodUrlUploadRequest) request);
+        }else{
+            this.mediaFileCheck(request);
+            this.coverFileCheck(request);
+        }
     }
 
     /**
@@ -388,11 +440,32 @@ public class VodUploadClient {
     }
 
     /**
+     * MediaUrlCheck
+     */
+    private void mediaUrlCheck(VodUrlUploadRequest request) throws VodClientException {
+        String mediaUrl = request.getMediaUrl();
+        if (StringUtil.isBlank(mediaUrl)) {
+            this.mediaFileCheck(request);
+            return;
+        }
+        if (StringUtil.isBlank(request.getMediaType())) {
+            String mediaType = UrlUtil.getFileType(mediaUrl);
+            if (StringUtil.isBlank(mediaType)) {
+                throw new VodClientException("lack media type");
+            }
+            request.setMediaType(mediaType);
+        }
+        if (StringUtil.isBlank(request.getMediaName())) {
+            request.setMediaName(UrlUtil.getFileName(mediaUrl));
+        }
+    }
+
+    /**
      * CoverFileCheck
      */
     private void coverFileCheck(VodUploadRequest request) throws VodClientException {
         String coverFilePath = request.getCoverFilePath();
-        if (!StringUtil.isBlank(coverFilePath)) {
+        if (StringUtil.isNotBlank(coverFilePath)) {
             if (!FileUtil.isFileExist(coverFilePath)) {
                 throw new VodClientException("cover path is invalid");
             }
@@ -403,6 +476,24 @@ public class VodUploadClient {
                 }
                 request.setCoverType(coverType);
             }
+        }
+    }
+
+    /**
+     * CoverUrlCheck
+     */
+    private void coverUrlCheck(VodUrlUploadRequest request) throws VodClientException {
+        String coverUrl = request.getCoverUrl();
+        if (StringUtil.isBlank(coverUrl)) {
+            coverFileCheck(request);
+            return;
+        }
+        if (StringUtil.isBlank(request.getCoverType())) {
+            String coverType = UrlUtil.getFileType(coverUrl);
+            if (StringUtil.isBlank(coverType)) {
+                throw new VodClientException("lack cover type");
+            }
+            request.setCoverType(coverType);
         }
     }
 

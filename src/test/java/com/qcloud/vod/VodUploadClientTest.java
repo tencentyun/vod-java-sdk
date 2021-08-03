@@ -1,5 +1,6 @@
 package com.qcloud.vod;
 
+import com.qcloud.cos.internal.Constants;
 import com.qcloud.vod.common.CopyUtil;
 import com.qcloud.vod.common.FileUtil;
 import com.qcloud.vod.common.PrintUtil;
@@ -7,6 +8,7 @@ import com.qcloud.vod.common.StringUtil;
 import com.qcloud.vod.exception.VodClientException;
 import com.qcloud.vod.model.VodUploadRequest;
 import com.qcloud.vod.model.VodUploadResponse;
+import com.qcloud.vod.model.VodUrlUploadRequest;
 import com.tencentcloudapi.common.Credential;
 import com.tencentcloudapi.common.exception.TencentCloudSDKException;
 import com.tencentcloudapi.common.profile.ClientProfile;
@@ -186,7 +188,7 @@ public class VodUploadClientTest {
     @Test
     public void uploadWithSecurityCos() throws Exception {
         VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4");
-        request.openSecureUpload();
+        request.enableSecureUpload();
         VodUploadClient client = initVodUploadClient();
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
@@ -240,9 +242,9 @@ public class VodUploadClientTest {
     public void customRetryCount() throws Exception {
         VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4");
         VodUploadClient client = initVodUploadClient();
-        client.setRetryCount(10);
+        client.setRetryCount(1);
         VodUploadResponse response = client.upload("ap-guangzhou", request);
-        if (client.getRetryCount() != 10) {
+        if (client.getRetryCount() != 1) {
             logger.error("retryCount error");
         }
         logger.info("Upload FileId = {}", response.getFileId());
@@ -349,6 +351,71 @@ public class VodUploadClientTest {
         logger.info("{},{},{}",isBlank,notBlank,letterCheck);
     }
 
+    @Test
+    public void uploadBigFile() throws Exception {
+        VodUploadRequest request = new VodUploadRequest("video/bigFile.mp4");
+        request.enableSecureUpload();
+        VodUploadClient client = initVodUploadClient();
+        VodUploadResponse response = client.upload("ap-guangzhou", request);
+        logger.info("Upload FileId = {}", response.getFileId());
+    }
+
+    @Test
+    public void CustomSliceSettings() throws Exception {
+        VodUploadRequest request = new VodUploadRequest("video/bigFile.mp4");
+        request.enableSecureUpload();
+        request.setConcurrentUploadNumber(3);
+        request.setMinimumUploadPartSize(10 * Constants.MB);
+        request.setMultipartUploadThreshold(10 * Constants.MB);
+        VodUploadClient client = initVodUploadClient();
+        VodUploadResponse response = client.upload("ap-guangzhou", request);
+        logger.info("Upload FileId = {}", response.getFileId());
+    }
+
+    @Test
+    public void uploadFromUrl1() throws Exception {
+        String mediaUrl =
+                "http://1300854363.vod2.myqcloud.com/96a48d63vodcq1300854363/e40970823701925920154859610/5Gka9KfAi3MA.mp4";
+        VodUploadRequest request = new VodUrlUploadRequest(mediaUrl);
+        request.enableSecureUpload();
+        request.setConcurrentUploadNumber(3);
+        request.setMinimumUploadPartSize(10 * Constants.MB);
+        request.setMultipartUploadThreshold(10 * Constants.MB);
+        VodUploadClient client = initVodUploadClient();
+        VodUploadResponse response = client.upload("ap-guangzhou", request);
+        logger.info("Upload FileId = {}", response.getFileId());
+    }
+
+    @Test
+    public void uploadFromUrl2() throws Exception {
+        String mediaUrl = "http://1300854363.vod2.myqcloud.com/96a48d63vodcq1300854363/e40970823701925920154859610/5Gka9KfAi3MA.mp4";
+        String coverFilePath = "video/Wildlife-cover.png";
+        VodUploadRequest request = new VodUrlUploadRequest(mediaUrl);
+        request.setCoverFilePath(coverFilePath);
+        request.enableSecureUpload();
+        request.setConcurrentUploadNumber(3);
+        request.setMinimumUploadPartSize(10 * Constants.MB);
+        request.setMultipartUploadThreshold(10 * Constants.MB);
+        VodUploadClient client = initVodUploadClient();
+        VodUploadResponse response = client.upload("ap-guangzhou", request);
+        logger.info("Upload FileId = {}", response.getFileId());
+    }
+
+    @Test
+    public void uploadFromUrl3() throws Exception {
+        String mediaFilePath = "video/Wildlife.mp4";
+        String coverUrl = "http://1300854363.vod2.myqcloud.com/96a48d63vodcq1300854363/8cfc31023701925921407776151/3701925921407776152.png";
+        VodUploadRequest request = new VodUrlUploadRequest("",coverUrl);
+        request.setMediaFilePath(mediaFilePath);
+        request.enableSecureUpload();
+        request.setConcurrentUploadNumber(3);
+        request.setMinimumUploadPartSize(10 * Constants.MB);
+        request.setMultipartUploadThreshold(10 * Constants.MB);
+        VodUploadClient client = initVodUploadClient();
+        VodUploadResponse response = client.upload("ap-guangzhou", request);
+        logger.info("Upload FileId = {}", response.getFileId());
+    }
+
     public static class FObject {
 
         private String name = "云点播SDK";
@@ -402,7 +469,5 @@ public class VodUploadClientTest {
                     + '}';
         }
     }
-
-
 
 }
