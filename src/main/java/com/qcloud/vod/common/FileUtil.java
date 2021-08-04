@@ -1,7 +1,5 @@
 package com.qcloud.vod.common;
 
-import com.qcloud.vod.exception.VodClientException;
-
 import java.io.File;
 
 /**
@@ -14,10 +12,7 @@ public class FileUtil {
     /**
      * Determine whether it exists
      */
-    public static Boolean isFileExist(String filePath) throws VodClientException {
-        if (StringUtil.isBlank(filePath)) {
-            throw new VodClientException("FilePath cannot be blank");
-        }
+    public static Boolean isFileExist(String filePath) {
         File file = new File(filePath);
         return file.exists();
     }
@@ -25,29 +20,22 @@ public class FileUtil {
     /**
      * Get file type
      */
-    public static String getFileType(String filePath) throws VodClientException {
-        if (StringUtil.isBlank(filePath)) {
-            throw new VodClientException("FilePath cannot be blank");
-        }
+    public static String getFileType(String filePath) {
         int index = filePath.lastIndexOf(".");
-        if (index == -1) {
+        if (index == -1 || (index + 1) == filePath.length()) {
             return "";
         }
         return filePath.substring(index + 1);
     }
 
     /**
-     * Get filename (excluding file extension)
+     * Get filename
      */
-    public static String getFileName(String filePath) throws VodClientException {
-        if (StringUtil.isBlank(filePath)) {
-            throw new VodClientException("FilePath cannot be blank");
-        }
+    public static String getFileName(String filePath) {
         File file = new File(filePath);
         String fileName = file.getName();
         int index = fileName.lastIndexOf(".");
         if (index == -1) {
-            // this should never happen
             return fileName;
         }
         return fileName.substring(0, index);

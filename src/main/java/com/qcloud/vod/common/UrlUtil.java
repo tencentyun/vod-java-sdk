@@ -1,7 +1,5 @@
 package com.qcloud.vod.common;
 
-import com.qcloud.vod.exception.VodClientException;
-
 /**
  * Url tool class
  *
@@ -9,34 +7,27 @@ import com.qcloud.vod.exception.VodClientException;
  */
 public class UrlUtil {
 
-    public static String getFileType(String mediaUrl) throws VodClientException {
-        if (StringUtil.isBlank(mediaUrl)) {
-            throw new VodClientException("mediaUrl cannot be blank");
-        }
-        int index = mediaUrl.lastIndexOf("/");
+    public static String getUrlFileType(String url) {
+        int index = url.lastIndexOf("/");
         if (index == -1) {
             return "";
         }
-        String fileName = mediaUrl.substring(index);
+        String fileName = url.substring(index);
         int typeIndex = fileName.lastIndexOf(".");
-        if (typeIndex == -1) {
+        if (typeIndex == -1 || url.length() == (index + 1)) {
             return "";
         }
         return fileName.substring(typeIndex + 1);
     }
 
-    public static String getFileName(String mediaUrl) throws VodClientException {
-        if (StringUtil.isBlank(mediaUrl)) {
-            throw new VodClientException("mediaUrl cannot be blank");
-        }
-        int index = mediaUrl.lastIndexOf("/");
-        if (index == -1 || mediaUrl.length() == (index + 1)) {
+    public static String getUrlFileName(String url) {
+        int index = url.lastIndexOf("/");
+        if (index == -1 || url.length() == (index + 1)) {
             return "";
         }
-        String fileName = mediaUrl.substring(index + 1);
+        String fileName = url.substring(index + 1);
         int typeIndex = fileName.lastIndexOf(".");
         if (typeIndex == -1) {
-            // this should never happen
             return fileName;
         }
         return fileName.substring(0, typeIndex);

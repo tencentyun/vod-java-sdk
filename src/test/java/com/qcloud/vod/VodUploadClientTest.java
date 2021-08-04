@@ -4,7 +4,6 @@ import com.qcloud.cos.internal.Constants;
 import com.qcloud.vod.common.CopyUtil;
 import com.qcloud.vod.common.FileUtil;
 import com.qcloud.vod.common.PrintUtil;
-import com.qcloud.vod.common.StringUtil;
 import com.qcloud.vod.common.UrlUtil;
 import com.qcloud.vod.exception.VodClientException;
 import com.qcloud.vod.model.VodUploadRequest;
@@ -60,7 +59,8 @@ public class VodUploadClientTest {
             StsClient client = new StsClient(cred, "ap-chengdu", clientProfile);
             GetFederationTokenRequest req = new GetFederationTokenRequest();
             req.setName("customName");
-            req.setPolicy("{\"version\": \"2.0\",\"statement\": [{\"effect\": \"allow\",\"resource\": \"*\"}]}");
+            req.setPolicy(
+                    "{\"version\": \"2.0\",\"statement\": [{\"effect\": \"allow\",\"resource\": \"*\"}]}");
             req.setDurationSeconds(1800);
             GetFederationTokenResponse resp = client.GetFederationToken(req);
             System.out.println(GetFederationTokenResponse.toJsonString(resp));
@@ -74,80 +74,81 @@ public class VodUploadClientTest {
 
     public VodUploadClient initSTSVodUploadClient() throws Exception {
         Credentials credentials = this.obtainTemporaryCredentials();
-        return new VodUploadClient(credentials.getTmpSecretId(), credentials.getTmpSecretKey(), credentials.getToken());
+        return new VodUploadClient(
+                credentials.getTmpSecretId(), credentials.getTmpSecretKey(), credentials.getToken());
     }
 
     @Test
     public void lackMediaPath() throws Exception {
-        thrown.expect(VodClientException.class);
-        thrown.expectMessage("lack media path");
+        this.thrown.expect(VodClientException.class);
+        this.thrown.expectMessage("lack media path");
         VodUploadRequest request = new VodUploadRequest();
-        VodUploadClient client = initVodUploadClient();
+        VodUploadClient client = this.initVodUploadClient();
         client.upload("ap-guangzhou", request);
     }
 
     @Test
     public void lackMediaType() throws Exception {
-        thrown.expect(VodClientException.class);
-        thrown.expectMessage("lack media type");
+        this.thrown.expect(VodClientException.class);
+        this.thrown.expectMessage("lack media type");
         VodUploadRequest request = new VodUploadRequest();
         request.setMediaFilePath("video/Wildlife");
-        VodUploadClient client = initVodUploadClient();
+        VodUploadClient client = this.initVodUploadClient();
         client.upload("ap-guangzhou", request);
     }
 
     @Test
     public void invalidMediaPath() throws Exception {
-        thrown.expect(VodClientException.class);
-        thrown.expectMessage("media path is invalid");
+        this.thrown.expect(VodClientException.class);
+        this.thrown.expectMessage("media path is invalid");
         VodUploadRequest request = new VodUploadRequest();
         request.setMediaFilePath("video/WildlifeA");
-        VodUploadClient client = initVodUploadClient();
+        VodUploadClient client = this.initVodUploadClient();
         client.upload("ap-guangzhou", request);
     }
 
     @Test
     public void invalidCoverPath() throws Exception {
-        thrown.expect(VodClientException.class);
-        thrown.expectMessage("cover path is invalid");
+        this.thrown.expect(VodClientException.class);
+        this.thrown.expectMessage("cover path is invalid");
         VodUploadRequest request = new VodUploadRequest();
         request.setMediaFilePath("video/Wildlife.mp4");
         request.setCoverFilePath("video/Wildlife-CoverA");
-        VodUploadClient client = initVodUploadClient();
+        VodUploadClient client = this.initVodUploadClient();
         client.upload("ap-guangzhou", request);
     }
 
     @Test
     public void lackCoverType() throws Exception {
-        thrown.expect(VodClientException.class);
-        thrown.expectMessage("lack cover type");
+        this.thrown.expect(VodClientException.class);
+        this.thrown.expectMessage("lack cover type");
         VodUploadRequest request = new VodUploadRequest();
         request.setMediaFilePath("video/Wildlife.mp4");
         request.setCoverFilePath("video/Wildlife-Cover");
-        VodUploadClient client = initVodUploadClient();
+        VodUploadClient client = this.initVodUploadClient();
         client.upload("ap-guangzhou", request);
     }
 
     @Test
     public void invalidMediaType() throws Exception {
-        thrown.expect(TencentCloudSDKException.class);
-        thrown.expectMessage("InvalidParameterValue.MediaType-invalid media type");
+        this.thrown.expect(TencentCloudSDKException.class);
+        this.thrown.expectMessage("InvalidParameterValue.MediaType-invalid media type");
         VodUploadRequest request = new VodUploadRequest();
         request.setMediaFilePath("video/Wildlife.mp4");
         request.setMediaType("test");
-        VodUploadClient client = initVodUploadClient();
+        VodUploadClient client = this.initVodUploadClient();
         client.upload("ap-guangzhou", request);
     }
 
     @Test
     public void invalidCoverType() throws Exception {
-        thrown.expect(TencentCloudSDKException.class);
-        thrown.expectMessage("InvalidParameterValue.CoverType-invalid cover type");
+        this.thrown.expect(TencentCloudSDKException.class);
+        this.thrown.expectMessage("InvalidParameterValue.CoverType-invalid cover type");
         VodUploadRequest request = new VodUploadRequest();
         request.setMediaFilePath("video/Wildlife.mp4");
         request.setCoverFilePath("video/Wildlife-Cover.png");
         request.setCoverType("test");
-        VodUploadClient client = initVodUploadClient();
+        VodUploadClient client = this.initVodUploadClient();
         client.upload("ap-guangzhou", request);
     }
 
@@ -155,7 +156,7 @@ public class VodUploadClientTest {
     public void invalidNoFileName() throws Exception {
         VodUploadRequest request = new VodUploadRequest();
         request.setMediaFilePath("video/.mp4");
-        VodUploadClient client = initVodUploadClient();
+        VodUploadClient client = this.initVodUploadClient();
         client.upload("ap-guangzhou", request);
     }
 
@@ -165,23 +166,23 @@ public class VodUploadClientTest {
                 new VodUploadRequest("video/Wildlife.mp4", "video/Wildlife-Cover.png");
         request.setStorageRegion("ap-chongqing");
         request.setMediaName("test-20181129-1423");
-        VodUploadClient client = initVodUploadClient();
+        VodUploadClient client = this.initVodUploadClient();
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
     }
-    
+
     @Test
     public void uploadHls() throws Exception {
         VodUploadRequest request = new VodUploadRequest("video/hls/prog_index.m3u8", "");
-        VodUploadClient client = initVodUploadClient();
+        VodUploadClient client = this.initVodUploadClient();
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
     }
-    
+
     @Test
     public void uploadMasterPlaylist() throws Exception {
         VodUploadRequest request = new VodUploadRequest("video/hls/bipbopall.m3u8", "");
-        VodUploadClient client = initVodUploadClient();
+        VodUploadClient client = this.initVodUploadClient();
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
     }
@@ -189,8 +190,8 @@ public class VodUploadClientTest {
     @Test
     public void uploadWithDisableSecurityCos() throws Exception {
         VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4");
-        request.closeSecureUpload();
-        VodUploadClient client = initVodUploadClient();
+        request.disableSecureUpload();
+        VodUploadClient client = this.initVodUploadClient();
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
     }
@@ -199,7 +200,7 @@ public class VodUploadClientTest {
     public void uploadWithConcurrentUploadNumber() throws Exception {
         VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4");
         request.setConcurrentUploadNumber(10);
-        VodUploadClient client = initVodUploadClient();
+        VodUploadClient client = this.initVodUploadClient();
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
     }
@@ -207,20 +208,20 @@ public class VodUploadClientTest {
     @Test
     public void uploadByCustomHeader() throws Exception {
         VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4");
-        request.putRequestHeader("header-name","header-value");
-        VodUploadClient client = initVodUploadClient();
+        request.putRequestHeader("header-name", "header-value");
+        VodUploadClient client = this.initVodUploadClient();
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
     }
 
     @Test
     public void deferProxyPort() throws Exception {
-        thrown.expect(TencentCloudSDKException.class);
-        thrown.expectMessage("java.net.UnknownHostException-@.noHostUrl.noHostUrl");
+        this.thrown.expect(TencentCloudSDKException.class);
+        this.thrown.expectMessage("java.net.UnknownHostException-@.noHostUrl.noHostUrl");
         VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4");
         HttpProfile httpProfile = new HttpProfile();
         httpProfile.setProxyHost("@.noHostUrl.noHostUrl");
-        VodUploadClient client = initVodUploadClientCustomHttpProfile(httpProfile);
+        VodUploadClient client = this.initVodUploadClientCustomHttpProfile(httpProfile);
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
     }
@@ -229,7 +230,7 @@ public class VodUploadClientTest {
     public void customHttpProfileUpload() throws Exception {
         HttpProfile httpProfile = new HttpProfile();
         httpProfile.setProtocol("http://");
-        VodUploadClient client = initVodUploadClientCustomHttpProfile(httpProfile);
+        VodUploadClient client = this.initVodUploadClientCustomHttpProfile(httpProfile);
         client.setRetryCount(10);
         if (client.getRetryCount() != 10) {
             logger.error("retryCount error");
@@ -242,7 +243,7 @@ public class VodUploadClientTest {
     @Test
     public void customRetryCount() throws Exception {
         VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4");
-        VodUploadClient client = initVodUploadClient();
+        VodUploadClient client = this.initVodUploadClient();
         client.setRetryCount(1);
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         if (client.getRetryCount() != 1) {
@@ -253,11 +254,11 @@ public class VodUploadClientTest {
 
     @Test
     public void subApplication() throws Exception {
-        thrown.expect(TencentCloudSDKException.class);
-        thrown.expectMessage("InvalidParameterValue.SubAppId-invalid subappid");
+        this.thrown.expect(TencentCloudSDKException.class);
+        this.thrown.expectMessage("InvalidParameterValue.SubAppId-invalid subappid");
         VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4");
         request.setSubAppId(13008543630L);
-        VodUploadClient client = initVodUploadClient();
+        VodUploadClient client = this.initVodUploadClient();
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
     }
@@ -265,17 +266,17 @@ public class VodUploadClientTest {
     @Test
     public void temporarySTSClient() throws Exception {
         VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4");
-        request.putRequestHeader("header-name","header-value");
-        VodUploadClient client = initSTSVodUploadClient();
+        request.putRequestHeader("header-name", "header-value");
+        VodUploadClient client = this.initSTSVodUploadClient();
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
     }
 
     @Test
     public void uploadAutoStartProcedure() throws Exception {
-        VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4",
-                "","LongVideoPreset");
-        VodUploadClient client = initVodUploadClient();
+        VodUploadRequest request =
+                new VodUploadRequest("video/Wildlife.mp4", "", "LongVideoPreset");
+        VodUploadClient client = this.initVodUploadClient();
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
     }
@@ -283,17 +284,18 @@ public class VodUploadClientTest {
     @Test
     public void uploadTimeOut() throws Exception {
         VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4");
-        VodUploadClient client = initVodUploadClient();
-        VodUploadResponse response = client.upload("ap-guangzhou", request,10);
+        VodUploadClient client = this.initVodUploadClient();
+        VodUploadResponse response = client.upload("ap-guangzhou", request, 10);
         logger.info("Upload FileId = {}", response.getFileId());
     }
 
     @Test
     public void ignorePreCheckSettingsToUpload() throws Exception {
-        thrown.expect(TencentCloudSDKException.class);
-        thrown.expectMessage("MissingParameter-The request is missing a required parameter `MediaType`.");
+        this.thrown.expect(TencentCloudSDKException.class);
+        this.thrown.expectMessage(
+                "MissingParameter-The request is missing a required parameter `MediaType`.");
         VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4");
-        VodUploadClient client = initVodUploadClient();
+        VodUploadClient client = this.initVodUploadClient();
         client.setIgnorePreCheck(true);
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
@@ -307,24 +309,12 @@ public class VodUploadClientTest {
     }
 
     @Test
-    public void fileUtilTest() throws VodClientException {
-        thrown.expect(VodClientException.class);
-        thrown.expectMessage("FilePath cannot be blank");
+    public void fileUtilTest() {
         String filePath = "video/Wildlife.mp4";
         Boolean fileExist = FileUtil.isFileExist(filePath);
         String fileName = FileUtil.getFileName(filePath);
         String fileType = FileUtil.getFileType(filePath);
-        logger.info("{},{},{}",fileExist,fileName,fileType);
-        filePath = "";
-        fileExist = FileUtil.isFileExist(filePath);
-        fileName = FileUtil.getFileName(filePath);
-        fileType = FileUtil.getFileType(filePath);
-        logger.info("{},{},{}",fileExist,fileName,fileType);
-        filePath = null;
-        fileExist = FileUtil.isFileExist(filePath);
-        fileName = FileUtil.getFileName(filePath);
-        fileType = FileUtil.getFileType(filePath);
-        logger.info("{},{},{}",fileExist,fileName,fileType);
+        logger.info("{},{},{}", fileExist, fileName, fileType);
     }
 
     @Test
@@ -336,26 +326,9 @@ public class VodUploadClientTest {
     }
 
     @Test
-    public void stringUtilTest() {
-        String str = "vod-java-sdk";
-        boolean isBlank = StringUtil.isBlank(str);
-        boolean notBlank = StringUtil.isNotBlank(str);
-        boolean letterCheck = StringUtil.letterCheck(str);
-        logger.info("{},{},{}",isBlank,notBlank,letterCheck);
-        str = "127.0.0.1";
-        letterCheck = StringUtil.letterCheck(str);
-        logger.info("{}",letterCheck);
-        str = null;
-        isBlank = StringUtil.isBlank(str);
-        notBlank = StringUtil.isNotBlank(str);
-        letterCheck = StringUtil.letterCheck(str);
-        logger.info("{},{},{}",isBlank,notBlank,letterCheck);
-    }
-
-    @Test
     public void uploadBigFile() throws Exception {
         VodUploadRequest request = new VodUploadRequest("video/bigFile.mp4");
-        VodUploadClient client = initVodUploadClient();
+        VodUploadClient client = this.initVodUploadClient();
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
     }
@@ -366,49 +339,52 @@ public class VodUploadClientTest {
         request.setConcurrentUploadNumber(3);
         request.setMinimumUploadPartSize(10 * Constants.MB);
         request.setMultipartUploadThreshold(10 * Constants.MB);
-        VodUploadClient client = initVodUploadClient();
+        VodUploadClient client = this.initVodUploadClient();
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
     }
 
     @Test
     public void urlUtilTest() throws Exception {
-        String mediaUrl = "1300854363.vod2.myqcloud.com/96a48d63vodcq1300854363/e40970823701925920154859610/5Gka9KfAi3MA.mp4";
-        String fileName = UrlUtil.getFileName(mediaUrl);
-        String fileType = UrlUtil.getFileType(mediaUrl);
-        logger.info("fileName:{},fileType:{}",fileName,fileType);
+        String mediaUrl =
+                "http://1300854363.vod2.myqcloud.com/96a48d63vodcq1300854363/e40970823701925920154859610/5Gka9KfAi3MA.mp4";
+        String fileName = UrlUtil.getUrlFileName(mediaUrl);
+        String fileType = UrlUtil.getUrlFileType(mediaUrl);
+        logger.info("fileName:{},fileType:{}", fileName, fileType);
         mediaUrl = "/5Gka9KfAi3MA.mp4";
-        fileName = UrlUtil.getFileName(mediaUrl);
-        fileType = UrlUtil.getFileType(mediaUrl);
-        logger.info("fileName:{},fileType:{}",fileName,fileType);
+        fileName = UrlUtil.getUrlFileName(mediaUrl);
+        fileType = UrlUtil.getUrlFileType(mediaUrl);
+        logger.info("fileName:{},fileType:{}", fileName, fileType);
         mediaUrl = "5Gka9KfAi3MA.mp4";
-        fileName = UrlUtil.getFileName(mediaUrl);
-        fileType = UrlUtil.getFileType(mediaUrl);
-        logger.info("fileName:{},fileType:{}",fileName,fileType);
+        fileName = UrlUtil.getUrlFileName(mediaUrl);
+        fileType = UrlUtil.getUrlFileType(mediaUrl);
+        logger.info("fileName:{},fileType:{}", fileName, fileType);
     }
 
     @Test
     public void uploadFromUrl1() throws Exception {
-        String mediaUrl = "http://1300854363.vod2.myqcloud.com/96a48d63vodcq1300854363/e40970823701925920154859610/5Gka9KfAi3MA.mp4";
+        String mediaUrl =
+                "http://1300854363.vod2.myqcloud.com/96a48d63vodcq1300854363/e40970823701925920154859610/5Gka9KfAi3MA.mp4";
         VodUploadRequest request = new VodUrlUploadRequest(mediaUrl);
         request.setConcurrentUploadNumber(3);
         request.setMinimumUploadPartSize(10 * Constants.MB);
         request.setMultipartUploadThreshold(10 * Constants.MB);
-        VodUploadClient client = initVodUploadClient();
+        VodUploadClient client = this.initVodUploadClient();
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
     }
 
     @Test
     public void uploadFromUrl2() throws Exception {
-        String mediaUrl = "http://1300854363.vod2.myqcloud.com/96a48d63vodcq1300854363/e40970823701925920154859610/5Gka9KfAi3MA.mp4";
+        String mediaUrl =
+                "http://1300854363.vod2.myqcloud.com/96a48d63vodcq1300854363/e40970823701925920154859610/5Gka9KfAi3MA.mp4";
         String coverFilePath = "video/Wildlife-cover.png";
         VodUploadRequest request = new VodUrlUploadRequest(mediaUrl);
         request.setCoverFilePath(coverFilePath);
         request.setConcurrentUploadNumber(3);
         request.setMinimumUploadPartSize(10 * Constants.MB);
         request.setMultipartUploadThreshold(10 * Constants.MB);
-        VodUploadClient client = initVodUploadClient();
+        VodUploadClient client = this.initVodUploadClient();
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
     }
@@ -416,26 +392,29 @@ public class VodUploadClientTest {
     @Test
     public void uploadFromUrl3() throws Exception {
         String mediaFilePath = "video/Wildlife.mp4";
-        String coverUrl = "http://1300854363.vod2.myqcloud.com/96a48d63vodcq1300854363/8cfc31023701925921407776151/3701925921407776152.png";
-        VodUploadRequest request = new VodUrlUploadRequest("",coverUrl);
+        String coverUrl =
+                "http://1300854363.vod2.myqcloud.com/96a48d63vodcq1300854363/8cfc31023701925921407776151/3701925921407776152.png";
+        VodUploadRequest request = new VodUrlUploadRequest("", coverUrl);
         request.setMediaFilePath(mediaFilePath);
         request.setConcurrentUploadNumber(3);
         request.setMinimumUploadPartSize(10 * Constants.MB);
         request.setMultipartUploadThreshold(10 * Constants.MB);
-        VodUploadClient client = initVodUploadClient();
+        VodUploadClient client = this.initVodUploadClient();
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
     }
 
     @Test
     public void uploadFromUrl4() throws Exception {
-        String mediaUrl = "http://1300854363.vod2.myqcloud.com/96a48d63vodcq1300854363/e40970823701925920154859610/5Gka9KfAi3MA.mp4";
-        String coverUrl = "http://1300854363.vod2.myqcloud.com/96a48d63vodcq1300854363/8cfc31023701925921407776151/3701925921407776152.png";
-        VodUploadRequest request = new VodUrlUploadRequest(mediaUrl,coverUrl);
+        String mediaUrl =
+                "http://1300854363.vod2.myqcloud.com/96a48d63vodcq1300854363/e40970823701925920154859610/5Gka9KfAi3MA.mp4";
+        String coverUrl =
+                "http://1300854363.vod2.myqcloud.com/96a48d63vodcq1300854363/8cfc31023701925921407776151/3701925921407776152.png";
+        VodUploadRequest request = new VodUrlUploadRequest(mediaUrl, coverUrl);
         request.setConcurrentUploadNumber(3);
         request.setMinimumUploadPartSize(10 * Constants.MB);
         request.setMultipartUploadThreshold(10 * Constants.MB);
-        VodUploadClient client = initVodUploadClient();
+        VodUploadClient client = this.initVodUploadClient();
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
     }
@@ -446,7 +425,7 @@ public class VodUploadClientTest {
         private Integer age = 18;
 
         public String getName() {
-            return name;
+            return this.name;
         }
 
         public void setName(String name) {
@@ -454,7 +433,7 @@ public class VodUploadClientTest {
         }
 
         public Integer getAge() {
-            return age;
+            return this.age;
         }
 
         public void setAge(Integer age) {
@@ -466,32 +445,29 @@ public class VodUploadClientTest {
         private String name;
         private Integer age;
 
+        @Override
         public String getName() {
-            return name;
+            return this.name;
         }
 
+        @Override
         public void setName(String name) {
             this.name = name;
         }
 
+        @Override
         public Integer getAge() {
-            return age;
+            return this.age;
         }
 
+        @Override
         public void setAge(Integer age) {
             this.age = age;
         }
 
         @Override
         public String toString() {
-            return "C{"
-                    + "name='"
-                    + name
-                    + '\''
-                    + ", age="
-                    + age
-                    + '}';
+            return "C{" + "name='" + this.name + '\'' + ", age=" + this.age + '}';
         }
     }
-
 }

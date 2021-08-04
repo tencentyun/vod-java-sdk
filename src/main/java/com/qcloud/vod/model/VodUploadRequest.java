@@ -7,6 +7,7 @@ import com.google.gson.JsonObject;
 import com.qcloud.cos.internal.Constants;
 import com.tencentcloudapi.common.AbstractModel;
 import com.tencentcloudapi.vod.v20180717.models.ApplyUploadRequest;
+
 import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.HashMap;
@@ -47,16 +48,17 @@ public class VodUploadRequest extends ApplyUploadRequest {
     private long minimumUploadPartSize = 5 * Constants.MB;
 
     /**
-     * 关闭Https上传,默认false
+     * 是否启用Https上传
      */
-    private boolean closeSecureUpload;
+    private boolean secureUpload = true;
 
     /**
      * 自定义请求头
      */
-    private Map<String,String> headersMap;
+    private Map<String, String> headersMap;
 
-    public VodUploadRequest() {}
+    public VodUploadRequest() {
+    }
 
     public VodUploadRequest(String mediaFilePath) {
         this.mediaFilePath = mediaFilePath;
@@ -73,7 +75,7 @@ public class VodUploadRequest extends ApplyUploadRequest {
     }
 
     public String getMediaFilePath() {
-        return mediaFilePath;
+        return this.mediaFilePath;
     }
 
     public void setMediaFilePath(String mediaFilePath) {
@@ -81,7 +83,7 @@ public class VodUploadRequest extends ApplyUploadRequest {
     }
 
     public String getCoverFilePath() {
-        return coverFilePath;
+        return this.coverFilePath;
     }
 
     public void setCoverFilePath(String coverFilePath) {
@@ -89,15 +91,15 @@ public class VodUploadRequest extends ApplyUploadRequest {
     }
 
     public int getConcurrentUploadNumber() {
-        return concurrentUploadNumber;
+        return this.concurrentUploadNumber;
     }
 
-    public void setConcurrentUploadNumber(Integer concurrentUploadNumber) {
+    public void setConcurrentUploadNumber(int concurrentUploadNumber) {
         this.concurrentUploadNumber = concurrentUploadNumber;
     }
 
     public long getMultipartUploadThreshold() {
-        return multipartUploadThreshold;
+        return this.multipartUploadThreshold;
     }
 
     public void setMultipartUploadThreshold(long multipartUploadThreshold) {
@@ -107,7 +109,7 @@ public class VodUploadRequest extends ApplyUploadRequest {
     }
 
     public long getMinimumUploadPartSize() {
-        return minimumUploadPartSize;
+        return this.minimumUploadPartSize;
     }
 
     public void setMinimumUploadPartSize(long minimumUploadPartSize) {
@@ -116,22 +118,22 @@ public class VodUploadRequest extends ApplyUploadRequest {
         }
     }
 
-    public boolean disableSecureUpload() {
-        return closeSecureUpload;
+    public boolean secureUpload() {
+        return this.secureUpload;
     }
 
-    public void closeSecureUpload() {
-        this.closeSecureUpload = false;
+    public void disableSecureUpload() {
+        this.secureUpload = false;
     }
 
-    public void putRequestHeader(String name,String value) {
+    public void putRequestHeader(String name, String value) {
         if (this.headersMap == null) {
             this.headersMap = new HashMap<>();
         }
-        this.headersMap.put(name,value);
+        this.headersMap.put(name, value);
     }
 
-    public Map<String,String> getRequestHeader() {
+    public Map<String, String> getRequestHeader() {
         if (this.headersMap != null) {
             return Collections.unmodifiableMap(this.headersMap);
         }
@@ -168,7 +170,7 @@ public class VodUploadRequest extends ApplyUploadRequest {
                 // this should never happen
             }
             if (fo instanceof AbstractModel) {
-                joall.add(entry.getKey(), toJsonObject((AbstractModel)fo));
+                joall.add(entry.getKey(), toJsonObject((AbstractModel) fo));
             } else {
                 joall.add(entry.getKey(), entry.getValue());
             }
