@@ -47,9 +47,9 @@ public class VodUploadRequest extends ApplyUploadRequest {
     private long minimumUploadPartSize = 5 * Constants.MB;
 
     /**
-     * cos上传时使用Https上传,默认false
+     * 关闭Https上传,默认false
      */
-    private boolean secureUpload;
+    private boolean closeSecureUpload;
 
     /**
      * 自定义请求头
@@ -116,12 +116,12 @@ public class VodUploadRequest extends ApplyUploadRequest {
         }
     }
 
-    public boolean needSecureUpload() {
-        return secureUpload;
+    public boolean disableSecureUpload() {
+        return closeSecureUpload;
     }
 
-    public void enableSecureUpload() {
-        this.secureUpload = true;
+    public void closeSecureUpload() {
+        this.closeSecureUpload = false;
     }
 
     public void putRequestHeader(String name,String value) {

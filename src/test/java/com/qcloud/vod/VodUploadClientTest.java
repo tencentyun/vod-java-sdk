@@ -187,9 +187,9 @@ public class VodUploadClientTest {
     }
 
     @Test
-    public void uploadWithSecurityCos() throws Exception {
+    public void uploadWithDisableSecurityCos() throws Exception {
         VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4");
-        request.enableSecureUpload();
+        request.closeSecureUpload();
         VodUploadClient client = initVodUploadClient();
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
@@ -355,7 +355,6 @@ public class VodUploadClientTest {
     @Test
     public void uploadBigFile() throws Exception {
         VodUploadRequest request = new VodUploadRequest("video/bigFile.mp4");
-        request.enableSecureUpload();
         VodUploadClient client = initVodUploadClient();
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
@@ -364,7 +363,6 @@ public class VodUploadClientTest {
     @Test
     public void customSliceSettings() throws Exception {
         VodUploadRequest request = new VodUploadRequest("video/bigFile.mp4");
-        request.enableSecureUpload();
         request.setConcurrentUploadNumber(3);
         request.setMinimumUploadPartSize(10 * Constants.MB);
         request.setMultipartUploadThreshold(10 * Constants.MB);
@@ -375,8 +373,7 @@ public class VodUploadClientTest {
 
     @Test
     public void urlUtilTest() throws Exception {
-        String mediaUrl =
-                "1300854363.vod2.myqcloud.com/96a48d63vodcq1300854363/e40970823701925920154859610/5Gka9KfAi3MA.mp4";
+        String mediaUrl = "1300854363.vod2.myqcloud.com/96a48d63vodcq1300854363/e40970823701925920154859610/5Gka9KfAi3MA.mp4";
         String fileName = UrlUtil.getFileName(mediaUrl);
         String fileType = UrlUtil.getFileType(mediaUrl);
         logger.info("fileName:{},fileType:{}",fileName,fileType);
@@ -392,10 +389,8 @@ public class VodUploadClientTest {
 
     @Test
     public void uploadFromUrl1() throws Exception {
-        String mediaUrl =
-                "http://1300854363.vod2.myqcloud.com/96a48d63vodcq1300854363/e40970823701925920154859610/5Gka9KfAi3MA.mp4";
+        String mediaUrl = "http://1300854363.vod2.myqcloud.com/96a48d63vodcq1300854363/e40970823701925920154859610/5Gka9KfAi3MA.mp4";
         VodUploadRequest request = new VodUrlUploadRequest(mediaUrl);
-        request.enableSecureUpload();
         request.setConcurrentUploadNumber(3);
         request.setMinimumUploadPartSize(10 * Constants.MB);
         request.setMultipartUploadThreshold(10 * Constants.MB);
@@ -410,7 +405,6 @@ public class VodUploadClientTest {
         String coverFilePath = "video/Wildlife-cover.png";
         VodUploadRequest request = new VodUrlUploadRequest(mediaUrl);
         request.setCoverFilePath(coverFilePath);
-        request.enableSecureUpload();
         request.setConcurrentUploadNumber(3);
         request.setMinimumUploadPartSize(10 * Constants.MB);
         request.setMultipartUploadThreshold(10 * Constants.MB);
@@ -425,7 +419,19 @@ public class VodUploadClientTest {
         String coverUrl = "http://1300854363.vod2.myqcloud.com/96a48d63vodcq1300854363/8cfc31023701925921407776151/3701925921407776152.png";
         VodUploadRequest request = new VodUrlUploadRequest("",coverUrl);
         request.setMediaFilePath(mediaFilePath);
-        request.enableSecureUpload();
+        request.setConcurrentUploadNumber(3);
+        request.setMinimumUploadPartSize(10 * Constants.MB);
+        request.setMultipartUploadThreshold(10 * Constants.MB);
+        VodUploadClient client = initVodUploadClient();
+        VodUploadResponse response = client.upload("ap-guangzhou", request);
+        logger.info("Upload FileId = {}", response.getFileId());
+    }
+
+    @Test
+    public void uploadFromUrl4() throws Exception {
+        String mediaUrl = "http://1300854363.vod2.myqcloud.com/96a48d63vodcq1300854363/e40970823701925920154859610/5Gka9KfAi3MA.mp4";
+        String coverUrl = "http://1300854363.vod2.myqcloud.com/96a48d63vodcq1300854363/8cfc31023701925921407776151/3701925921407776152.png";
+        VodUploadRequest request = new VodUrlUploadRequest(mediaUrl,coverUrl);
         request.setConcurrentUploadNumber(3);
         request.setMinimumUploadPartSize(10 * Constants.MB);
         request.setMultipartUploadThreshold(10 * Constants.MB);

@@ -100,6 +100,15 @@ public class VodUploadClient {
      */
     public VodUploadResponse upload(String region, VodUploadRequest request)
             throws Exception {
+
+        // disableSecureUpload influence vod and cos request
+        if (request.disableSecureUpload()) {
+            if (httpProfile == null) {
+                httpProfile = new HttpProfile();
+            }
+            httpProfile.setProtocol(HttpProfile.REQ_HTTP);
+        }
+
         this.beforeUploadCheck(region,request);
 
         Credential credential = new Credential(secretId, secretKey, token);
@@ -257,7 +266,9 @@ public class VodUploadClient {
             credentials = new BasicCOSCredentials(secretId, secretKey);
         }
         ClientConfig clientConfig = new ClientConfig(new Region(applyUploadResponse.getStorageRegion()));
-        if (request.needSecureUpload()) {
+        if (request.disableSecureUpload()) {
+            clientConfig.setHttpProtocol(HttpProtocol.http);
+        } else {
             clientConfig.setHttpProtocol(HttpProtocol.https);
         }
         if (needHttpProxy()) {
