@@ -10,7 +10,7 @@ public class UrlUtil {
     public static String getUrlFileType(String url) {
         int index = url.lastIndexOf("/");
         if (index == -1) {
-            return "";
+            return url;
         }
         String fileName = url.substring(index);
         int typeIndex = fileName.lastIndexOf(".");
@@ -23,7 +23,7 @@ public class UrlUtil {
     public static String getUrlFileName(String url) {
         int index = url.lastIndexOf("/");
         if (index == -1 || url.length() == (index + 1)) {
-            return "";
+            return url;
         }
         String fileName = url.substring(index + 1);
         int typeIndex = fileName.lastIndexOf(".");

@@ -115,7 +115,8 @@ public class VodUploadClient {
         VodClient vodClient;
         if (this.needHttpProxy()) {
             this.defaultDomainProxyPort();
-            vodClient = new VodClient(credential, region, new ClientProfile(ClientProfile.SIGN_TC3_256, this.httpProfile));
+            vodClient = new VodClient(credential, region,
+                    new ClientProfile(ClientProfile.SIGN_TC3_256, this.httpProfile));
         } else {
             vodClient = new VodClient(credential, region);
         }

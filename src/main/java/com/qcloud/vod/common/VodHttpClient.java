@@ -36,6 +36,8 @@ public class VodHttpClient {
     private final Iterator<String> urlIterator;
 
     /**
+     * 构造VodHttpClient 资源请求对象
+     *
      * @param timeout 单位: 秒
      * @param urls    资源url
      */
@@ -48,6 +50,12 @@ public class VodHttpClient {
         this.requestConfig = RequestConfig.custom().setConnectTimeout(1000 * timeout).build();
     }
 
+    /**
+     * 获取下一个InputStreamInfo对象,注意会跳过空url资源
+     *
+     * @return InputStreamInfo 对象 在当前类中
+     * @throws IOException
+     */
     public InputStreamInfo getNextInputStream() throws IOException {
         this.executePre();
         if (this.urlIterator.hasNext()) {
