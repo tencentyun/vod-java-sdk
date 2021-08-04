@@ -103,9 +103,7 @@ public class VodUploadRequest extends ApplyUploadRequest {
     }
 
     public void setMultipartUploadThreshold(long multipartUploadThreshold) {
-        if (multipartUploadThreshold > 0) {
-            this.multipartUploadThreshold = multipartUploadThreshold;
-        }
+        this.multipartUploadThreshold = multipartUploadThreshold;
     }
 
     public long getMinimumUploadPartSize() {
@@ -113,9 +111,7 @@ public class VodUploadRequest extends ApplyUploadRequest {
     }
 
     public void setMinimumUploadPartSize(long minimumUploadPartSize) {
-        if (minimumUploadPartSize > 0) {
-            this.minimumUploadPartSize = minimumUploadPartSize;
-        }
+        this.minimumUploadPartSize = minimumUploadPartSize;
     }
 
     public boolean secureUpload() {

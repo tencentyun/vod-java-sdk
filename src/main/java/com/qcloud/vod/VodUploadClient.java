@@ -373,7 +373,7 @@ public class VodUploadClient {
     private PutObjectRequest createPutObjectRequest(InputStream inputStream, long contentLength, String bucket,
                                                     String storagePath) {
         ObjectMetadata objectMetadata = new ObjectMetadata();
-        if (contentLength != 0L) {
+        if (contentLength <= 0L) {
             objectMetadata.setContentLength(contentLength);
         }
         return new PutObjectRequest(bucket, storagePath, inputStream, objectMetadata);
