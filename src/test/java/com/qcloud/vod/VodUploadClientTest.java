@@ -267,7 +267,8 @@ public class VodUploadClientTest {
     @Test
     public void uploadAutoStartProcedure() throws Exception {
         VodUploadRequest request =
-                new VodUploadRequest("video/Wildlife.mp4", "", "LongVideoPreset");
+                new VodUploadRequest("video/Wildlife.mp4");
+        request.setProcedure("LongVideoPreset");
         VodUploadClient client = this.initVodUploadClient();
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
