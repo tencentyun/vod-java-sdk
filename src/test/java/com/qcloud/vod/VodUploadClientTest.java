@@ -48,25 +48,19 @@ public class VodUploadClientTest {
      */
     public Credentials obtainTemporaryCredentials() throws Exception {
         Credentials credentials;
-        try {
-            Credential cred = new Credential(secretId, secretKey);
-            HttpProfile httpProfile = new HttpProfile();
-            httpProfile.setEndpoint("sts.tencentcloudapi.com");
-            ClientProfile clientProfile = new ClientProfile();
-            clientProfile.setHttpProfile(httpProfile);
-            StsClient client = new StsClient(cred, "ap-chengdu", clientProfile);
-            GetFederationTokenRequest req = new GetFederationTokenRequest();
-            req.setName("customName");
-            req.setPolicy(
-                    "{\"version\": \"2.0\",\"statement\": [{\"effect\": \"allow\",\"resource\": \"*\"}]}");
-            req.setDurationSeconds(1800);
-            GetFederationTokenResponse resp = client.GetFederationToken(req);
-            System.out.println(GetFederationTokenResponse.toJsonString(resp));
-            credentials = resp.getCredentials();
-        } catch (TencentCloudSDKException e) {
-            System.out.println(e.toString());
-            throw e;
-        }
+        Credential cred = new Credential(secretId, secretKey);
+        HttpProfile httpProfile = new HttpProfile();
+        httpProfile.setEndpoint("sts.tencentcloudapi.com");
+        ClientProfile clientProfile = new ClientProfile();
+        clientProfile.setHttpProfile(httpProfile);
+        StsClient client = new StsClient(cred, "ap-chengdu", clientProfile);
+        GetFederationTokenRequest req = new GetFederationTokenRequest();
+        req.setName("customName");
+        req.setPolicy(
+                "{\"version\": \"2.0\",\"statement\": [{\"effect\": \"allow\",\"resource\": \"*\"}]}");
+        req.setDurationSeconds(1800);
+        GetFederationTokenResponse resp = client.GetFederationToken(req);
+        credentials = resp.getCredentials();
         return credentials;
     }
 
