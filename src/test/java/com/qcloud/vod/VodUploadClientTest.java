@@ -388,5 +388,4 @@ public class VodUploadClientTest {
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
     }
-
 }
