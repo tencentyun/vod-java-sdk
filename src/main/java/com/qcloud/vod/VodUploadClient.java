@@ -1,5 +1,6 @@
 package com.qcloud.vod;
 
+import com.google.gson.Gson;
 import com.qcloud.cos.COSClient;
 import com.qcloud.cos.ClientConfig;
 import com.qcloud.cos.auth.BasicCOSCredentials;
@@ -13,7 +14,6 @@ import com.qcloud.cos.region.Region;
 import com.qcloud.cos.transfer.TransferManager;
 import com.qcloud.cos.transfer.TransferManagerConfiguration;
 import com.qcloud.cos.transfer.Upload;
-import com.qcloud.vod.common.CopyUtil;
 import com.qcloud.vod.common.FileUtil;
 import com.qcloud.vod.common.PrintUtil;
 import com.qcloud.vod.common.UrlUtil;
@@ -127,11 +127,8 @@ public class VodUploadClient {
         CommitUploadResponse commitUploadResponse = this.commitUpload(request, applyUploadResponse, vodClient);
 
         VodUploadResponse uploadResponse;
-        try {
-            uploadResponse = CopyUtil.clone(commitUploadResponse, VodUploadResponse.class);
-        } catch (Exception e) {
-            throw new VodClientException(e);
-        }
+        Gson gson = new Gson();
+        uploadResponse = gson.fromJson(gson.toJson(commitUploadResponse), VodUploadResponse.class);
 
         return uploadResponse;
     }
@@ -175,7 +172,7 @@ public class VodUploadClient {
      */
     private ApplyUploadResponse applicationUpload(VodUploadRequest request, VodClient vodClient) throws Exception {
         ApplyUploadRequest applyUploadRequest = ApplyUploadRequest
-                .fromJsonString(VodUploadRequest.toJsonString(request), ApplyUploadRequest.class);
+                .fromJsonString(PrintUtil.printObject(request), ApplyUploadRequest.class);
         ApplyUploadResponse applyUploadResponse = this.applyUploadDo(vodClient, applyUploadRequest);
         logger.info("ApplyUpload Response = {}", PrintUtil.printObject(applyUploadResponse));
         return applyUploadResponse;

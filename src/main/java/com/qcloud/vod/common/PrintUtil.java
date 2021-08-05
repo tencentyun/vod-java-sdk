@@ -8,7 +8,7 @@ import com.google.gson.GsonBuilder;
  *
  * @author jianguoxu
  */
-public class PrintUtil {
+public class PrintUtil<T> {
 
     /**
      * Json serialize

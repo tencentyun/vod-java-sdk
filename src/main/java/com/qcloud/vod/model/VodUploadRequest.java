@@ -1,19 +1,11 @@
 package com.qcloud.vod.model;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.qcloud.cos.internal.Constants;
-import com.tencentcloudapi.common.AbstractModel;
 import com.tencentcloudapi.vod.v20180717.models.ApplyUploadRequest;
 
-import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * 上传请求
@@ -136,41 +128,4 @@ public class VodUploadRequest extends ApplyUploadRequest {
         return null;
     }
 
-    public static String toJsonString(VodUploadRequest obj) {
-        return toJsonObject(obj).toString();
-    }
-
-    private static <O extends AbstractModel> JsonObject toJsonObject(O obj) {
-        Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
-        JsonObject joall = new JsonObject();
-        JsonObject joadd = gson.toJsonTree(obj.any()).getAsJsonObject();
-        for (Map.Entry<String, JsonElement> entry : joadd.entrySet()) {
-            joall.add(entry.getKey(), entry.getValue());
-        }
-        // jopublic will override joadd if key conflict exists
-        JsonObject jopublic = gson.toJsonTree(obj).getAsJsonObject();
-        Set<String> fieldNameSet = new HashSet<>();
-        for (Field field : obj.getClass().getFields()) {
-            fieldNameSet.add(field.getName());
-        }
-        for (Map.Entry<String, JsonElement> entry : jopublic.entrySet()) {
-            Object fo = null;
-            Field f;
-            try {
-                if (fieldNameSet.contains(entry.getKey())) {
-                    f = obj.getClass().getDeclaredField(entry.getKey());
-                    f.setAccessible(true);
-                    fo = f.get(obj);
-                }
-            } catch (NoSuchFieldException | IllegalAccessException e) {
-                // this should never happen
-            }
-            if (fo instanceof AbstractModel) {
-                joall.add(entry.getKey(), toJsonObject((AbstractModel) fo));
-            } else {
-                joall.add(entry.getKey(), entry.getValue());
-            }
-        }
-        return joall;
-    }
 }

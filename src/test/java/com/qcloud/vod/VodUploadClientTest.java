@@ -1,9 +1,7 @@
 package com.qcloud.vod;
 
 import com.qcloud.cos.internal.Constants;
-import com.qcloud.vod.common.CopyUtil;
 import com.qcloud.vod.common.FileUtil;
-import com.qcloud.vod.common.PrintUtil;
 import com.qcloud.vod.common.UrlUtil;
 import com.qcloud.vod.exception.VodClientException;
 import com.qcloud.vod.model.VodUploadRequest;
@@ -232,9 +230,6 @@ public class VodUploadClientTest {
         httpProfile.setProtocol("http://");
         VodUploadClient client = this.initVodUploadClientCustomHttpProfile(httpProfile);
         client.setRetryCount(10);
-        if (client.getRetryCount() != 10) {
-            logger.error("retryCount error");
-        }
         VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4");
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
@@ -246,9 +241,6 @@ public class VodUploadClientTest {
         VodUploadClient client = this.initVodUploadClient();
         client.setRetryCount(1);
         VodUploadResponse response = client.upload("ap-guangzhou", request);
-        if (client.getRetryCount() != 1) {
-            logger.error("retryCount error");
-        }
         logger.info("Upload FileId = {}", response.getFileId());
     }
 
@@ -302,27 +294,12 @@ public class VodUploadClientTest {
     }
 
     @Test
-    public void copyUtilTest() throws Exception {
-        FObject f = new FObject();
-        CObject c = CopyUtil.clone(f, CObject.class);
-        logger.info(c.toString());
-    }
-
-    @Test
     public void fileUtilTest() {
         String filePath = "video/Wildlife.mp4";
         Boolean fileExist = FileUtil.isFileExist(filePath);
         String fileName = FileUtil.getFileName(filePath);
         String fileType = FileUtil.getFileType(filePath);
         logger.info("{},{},{}", fileExist, fileName, fileType);
-    }
-
-    @Test
-    public void printUtilTest() {
-        FObject f = new FObject();
-        logger.info(PrintUtil.printObject(f));
-        f = null;
-        logger.info(PrintUtil.printObject(f));
     }
 
     @Test
@@ -419,55 +396,4 @@ public class VodUploadClientTest {
         logger.info("Upload FileId = {}", response.getFileId());
     }
 
-    public static class FObject {
-
-        private String name = "云点播SDK";
-        private Integer age = 18;
-
-        public String getName() {
-            return this.name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        public Integer getAge() {
-            return this.age;
-        }
-
-        public void setAge(Integer age) {
-            this.age = age;
-        }
-    }
-
-    public static class CObject extends FObject {
-        private String name;
-        private Integer age;
-
-        @Override
-        public String getName() {
-            return this.name;
-        }
-
-        @Override
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        @Override
-        public Integer getAge() {
-            return this.age;
-        }
-
-        @Override
-        public void setAge(Integer age) {
-            this.age = age;
-        }
-
-        @Override
-        public String toString() {
-            return "C{" + "name='" + this.name + '\'' + ", age=" + this.age + '}';
-        }
-    }
 }
