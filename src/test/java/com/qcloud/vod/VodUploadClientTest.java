@@ -47,7 +47,6 @@ public class VodUploadClientTest {
      * 获取cos上传的临时凭证
      */
     public Credentials obtainTemporaryCredentials() throws Exception {
-        Credentials credentials;
         Credential cred = new Credential(secretId, secretKey);
         HttpProfile httpProfile = new HttpProfile();
         httpProfile.setEndpoint("sts.tencentcloudapi.com");
@@ -60,8 +59,7 @@ public class VodUploadClientTest {
                 "{\"version\": \"2.0\",\"statement\": [{\"effect\": \"allow\",\"resource\": \"*\"}]}");
         req.setDurationSeconds(1800);
         GetFederationTokenResponse resp = client.GetFederationToken(req);
-        credentials = resp.getCredentials();
-        return credentials;
+        return resp.getCredentials();
     }
 
     public VodUploadClient initSTSVodUploadClient() throws Exception {
