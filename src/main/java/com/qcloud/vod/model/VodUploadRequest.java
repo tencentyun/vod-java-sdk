@@ -1,14 +1,11 @@
 package com.qcloud.vod.model;
 
-import java.lang.reflect.Field;
-import java.util.Map;
-
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.tencentcloudapi.common.AbstractModel;
+import com.qcloud.cos.internal.Constants;
 import com.tencentcloudapi.vod.v20180717.models.ApplyUploadRequest;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 上传请求
@@ -17,21 +14,51 @@ import com.tencentcloudapi.vod.v20180717.models.ApplyUploadRequest;
  */
 public class VodUploadRequest extends ApplyUploadRequest {
 
-    private String MediaFilePath;
+    /**
+     * 文件路径
+     */
+    private String mediaFilePath;
 
-    private String CoverFilePath;
+    /**
+     * 封面路径(可选)
+     */
+    private String coverFilePath;
 
-    private Integer ConcurrentUploadNumber;
+    /**
+     * 上传并发线程数
+     */
+    private int concurrentUploadNumber;
 
-    public VodUploadRequest() {}
+    /**
+     * 文件达到多大才开始分片上传(单位:byte,默认5mb)
+     */
+    private long multipartUploadThreshold = 5 * Constants.MB;
+
+    /**
+     * 分片时每一片的大小(单位:byte,默认5mb)
+     */
+    private long minimumUploadPartSize = 5 * Constants.MB;
+
+    /**
+     * 是否启用Https上传
+     */
+    private boolean secureUpload = true;
+
+    /**
+     * 自定义请求头
+     */
+    private Map<String, String> headersMap;
+
+    public VodUploadRequest() {
+    }
 
     public VodUploadRequest(String mediaFilePath) {
-        this.MediaFilePath = mediaFilePath;
+        this.mediaFilePath = mediaFilePath;
     }
 
     public VodUploadRequest(String mediaFilePath, String coverFilePath) {
         this(mediaFilePath);
-        this.CoverFilePath = coverFilePath;
+        this.coverFilePath = coverFilePath;
     }
 
     public VodUploadRequest(String mediaFilePath, String coverFilePath, String procedure) {
@@ -40,57 +67,65 @@ public class VodUploadRequest extends ApplyUploadRequest {
     }
 
     public String getMediaFilePath() {
-        return MediaFilePath;
+        return this.mediaFilePath;
     }
 
     public void setMediaFilePath(String mediaFilePath) {
-        this.MediaFilePath = mediaFilePath;
+        this.mediaFilePath = mediaFilePath;
     }
 
     public String getCoverFilePath() {
-        return CoverFilePath;
+        return this.coverFilePath;
     }
 
     public void setCoverFilePath(String coverFilePath) {
-        this.CoverFilePath = coverFilePath;
+        this.coverFilePath = coverFilePath;
     }
 
-    public Integer getConcurrentUploadNumber() {
-        return ConcurrentUploadNumber;
+    public int getConcurrentUploadNumber() {
+        return this.concurrentUploadNumber;
     }
 
-    public void setConcurrentUploadNumber(Integer concurrentUploadNumber) {
-        this.ConcurrentUploadNumber = concurrentUploadNumber;
+    public void setConcurrentUploadNumber(int concurrentUploadNumber) {
+        this.concurrentUploadNumber = concurrentUploadNumber;
     }
-    
-    public static String toJsonString(VodUploadRequest obj) {
-         return toJsonObject(obj).toString();
+
+    public long getMultipartUploadThreshold() {
+        return this.multipartUploadThreshold;
     }
-    
-    private static <O extends AbstractModel> JsonObject toJsonObject(O obj) {
-        Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
-        JsonObject joall = new JsonObject();
-        JsonObject joadd = gson.toJsonTree(obj.any()).getAsJsonObject();
-        for (Map.Entry<String, JsonElement> entry : joadd.entrySet()) {
-            joall.add(entry.getKey(), entry.getValue());
+
+    public void setMultipartUploadThreshold(long multipartUploadThreshold) {
+        this.multipartUploadThreshold = multipartUploadThreshold;
+    }
+
+    public long getMinimumUploadPartSize() {
+        return this.minimumUploadPartSize;
+    }
+
+    public void setMinimumUploadPartSize(long minimumUploadPartSize) {
+        this.minimumUploadPartSize = minimumUploadPartSize;
+    }
+
+    public boolean secureUpload() {
+        return this.secureUpload;
+    }
+
+    public void disableSecureUpload() {
+        this.secureUpload = false;
+    }
+
+    public void putRequestHeader(String name, String value) {
+        if (this.headersMap == null) {
+            this.headersMap = new HashMap<>();
         }
-        // jopublic will override joadd if key conflict exists
-        JsonObject jopublic = gson.toJsonTree(obj).getAsJsonObject();
-        for (Map.Entry<String, JsonElement> entry : jopublic.entrySet()) {
-            Object fo = null;
-            try {
-                Field f = obj.getClass().getDeclaredField(entry.getKey());
-                f.setAccessible(true);
-                fo = f.get(obj);
-            } catch (Exception e) {
-                // this should never happen
-            }
-            if (fo instanceof AbstractModel) {
-                joall.add(entry.getKey(), toJsonObject((AbstractModel)fo));
-            } else {
-                joall.add(entry.getKey(), entry.getValue());
-            }
-        }
-        return joall;
+        this.headersMap.put(name, value);
     }
+
+    public Map<String, String> getRequestHeader() {
+        if (this.headersMap != null) {
+            return Collections.unmodifiableMap(this.headersMap);
+        }
+        return null;
+    }
+
 }

@@ -22,14 +22,14 @@ public class FileUtil {
      */
     public static String getFileType(String filePath) {
         int index = filePath.lastIndexOf(".");
-        if (index == -1) {
+        if (index == -1 || (index + 1) == filePath.length()) {
             return "";
         }
         return filePath.substring(index + 1);
     }
 
     /**
-     * Get filename (excluding file extension)
+     * Get filename
      */
     public static String getFileName(String filePath) {
         File file = new File(filePath);

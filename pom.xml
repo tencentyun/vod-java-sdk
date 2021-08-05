@@ -50,13 +50,20 @@
             <version>4.12</version>
             <scope>test</scope>
         </dependency>
-        
- 		<dependency>
-	            <groupId>com.tencentcloudapi</groupId>
-	            <artifactId>tencentcloud-sdk-java</artifactId>
-	            <version>3.1.2</version>
-	    </dependency>
-	</dependencies>
+
+        <dependency>
+            <groupId>com.tencentcloudapi</groupId>
+            <artifactId>tencentcloud-sdk-java</artifactId>
+            <version>3.1.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.11</version>
+        </dependency>
+
+    </dependencies>
 
     <scm>
         <connection>scm:git:https://github.com/tencentyun/vod-java-sdk.git</connection>
@@ -90,6 +97,18 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.sonatype.plugins</groupId>
+                <artifactId>nexus-staging-maven-plugin</artifactId>
+                <version>1.6.7</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <serverId>ossrh</serverId>
+                    <nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
+                    <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                </configuration>
+            </plugin>
+
             <plugin>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <configuration>
@@ -148,6 +167,12 @@
                         <goals>
                             <goal>sign</goal>
                         </goals>
+                        <configuration>
+                            <gpgArguments>
+                                <arg>--pinentry-mode</arg>
+                                <arg>loopback</arg>
+                            </gpgArguments>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -163,6 +188,7 @@
                     </formats>
                 </configuration>
             </plugin>
+
         </plugins>
     </build>
 
@@ -185,4 +211,5 @@
             </build>
         </profile>
     </profiles>
+
 </project>
