@@ -24,7 +24,7 @@ VOD Java SDK 是基于云点播上传功能进行包装的 Java 版本 SDK，SDK
 <dependency>
     <groupId>com.qcloud</groupId>
     <artifactId>vod_api</artifactId>
-    <version>2.1.4</version>
+    <version>2.1.5</version>
 </dependency>
 ```
 
