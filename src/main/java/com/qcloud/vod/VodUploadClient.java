@@ -5,6 +5,7 @@ import com.qcloud.cos.ClientConfig;
 import com.qcloud.cos.auth.BasicCOSCredentials;
 import com.qcloud.cos.auth.BasicSessionCredentials;
 import com.qcloud.cos.auth.COSCredentials;
+import com.qcloud.cos.http.HttpProtocol;
 import com.qcloud.cos.region.Region;
 import com.qcloud.cos.transfer.TransferManager;
 import com.qcloud.cos.transfer.Upload;
@@ -90,7 +91,7 @@ public class VodUploadClient {
 
 		Credential credential = new Credential(secretId, secretKey, token);
 		VodClient vodClient = null;
-		if (httpProfile != null && httpProfile.getProxyHost() != "" && httpProfile.getProxyPort() != 0) {
+		if (httpProfile != null && StringUtil.isNotEmpty(httpProfile.getProxyHost()) && httpProfile.getProxyPort() != 0) {
 			vodClient = new VodClient(credential, region, new ClientProfile(ClientProfile.SIGN_TC3_256, httpProfile));
 		} else {
 			vodClient = new VodClient(credential, region);
@@ -118,13 +119,19 @@ public class VodUploadClient {
 			credentials = new BasicCOSCredentials(secretId, secretKey);
 		}
 		ClientConfig clientConfig = new ClientConfig(new Region(applyUploadResponse.getStorageRegion()));
-		if (httpProfile != null && httpProfile.getProxyHost() != "" && httpProfile.getProxyPort() != 0) {
-			clientConfig.setHttpProxyIp(httpProfile.getProxyHost());
-			clientConfig.setHttpProxyPort(httpProfile.getProxyPort());
-			if (httpProfile.getProxyUsername() != "") {
-				clientConfig.setProxyUsername(httpProfile.getProxyUsername());
-				clientConfig.setProxyPassword(httpProfile.getProxyPassword());
-				clientConfig.setUseBasicAuth(true);
+		clientConfig.setHttpProtocol(HttpProtocol.https);
+		if (httpProfile != null) {
+			if (HttpProfile.REQ_HTTP.equals(httpProfile.getProtocol())) {
+				clientConfig.setHttpProtocol(HttpProtocol.http);
+			}
+			if (StringUtil.isNotEmpty(httpProfile.getProxyHost()) && httpProfile.getProxyPort() != 0) {
+				clientConfig.setHttpProxyIp(httpProfile.getProxyHost());
+				clientConfig.setHttpProxyPort(httpProfile.getProxyPort());
+				if (StringUtil.isNotEmpty(httpProfile.getProxyUsername())) {
+					clientConfig.setProxyUsername(httpProfile.getProxyUsername());
+					clientConfig.setProxyPassword(httpProfile.getProxyPassword());
+					clientConfig.setUseBasicAuth(true);
+				}
 			}
 		}
 		COSClient cosClient = new COSClient(credentials, clientConfig);

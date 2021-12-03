@@ -4,6 +4,7 @@ import com.qcloud.vod.exception.VodClientException;
 import com.qcloud.vod.model.VodUploadRequest;
 import com.qcloud.vod.model.VodUploadResponse;
 import com.tencentcloudapi.common.exception.TencentCloudSDKException;
+import com.tencentcloudapi.common.profile.HttpProfile;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -23,10 +24,13 @@ public class VodUploadClientTest {
     public ExpectedException thrown= ExpectedException.none();
 
     public VodUploadClient initVodUploadClient() {
-    	String secretId = System.getenv("SECRET_ID");
-    	String secretKey = System.getenv("SECRET_KEY");
-        VodUploadClient vodUploadClient = new VodUploadClient(secretId, secretKey);
-        return vodUploadClient;
+        return initVodUploadClient(null);
+    }
+
+    public VodUploadClient initVodUploadClient(HttpProfile httpProfile) {
+        String secretId = System.getenv("SECRET_ID");
+        String secretKey = System.getenv("SECRET_KEY");
+        return new VodUploadClient(secretId, secretKey, httpProfile);
     }
 
     @Test
@@ -112,7 +116,19 @@ public class VodUploadClientTest {
         VodUploadResponse response = client.upload("ap-guangzhou", request);
         logger.info("Upload FileId = {}", response.getFileId());
     }
-    
+
+    @Test
+    public void uploadMediaWithHttp() throws Exception {
+        VodUploadRequest request = new VodUploadRequest("video/Wildlife.mp4", "video/Wildlife-Cover.png");
+        request.setStorageRegion("ap-chongqing");
+        request.setMediaName("test-20181129-1424");
+        HttpProfile httpProfile = new HttpProfile();
+        httpProfile.setProtocol(HttpProfile.REQ_HTTP);
+        VodUploadClient client = initVodUploadClient(httpProfile);
+        VodUploadResponse response = client.upload("ap-guangzhou", request);
+        logger.info("Upload FileId = {}", response.getFileId());
+    }
+
     @Test
     public void uploadHls() throws Exception {
         VodUploadRequest request = new VodUploadRequest("video/hls/prog_index.m3u8", "");
